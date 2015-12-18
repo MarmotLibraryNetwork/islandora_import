@@ -1,0 +1,5 @@
+.idea/*
+config.ini
+phpinfo.php
+httpd-islandora_import.conf
+tuque/tests/*
