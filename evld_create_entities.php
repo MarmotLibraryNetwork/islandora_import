@@ -31,6 +31,7 @@ $loadPeople = $config['loadPeople'];
 $maxPeopleToLoad = isset($config['maxPeopleToLoad']) ? $config['maxPeopleToLoad'] : -1;
 $loadEvents = $config['loadEvents'];
 $loadPlaces = $config['loadPlaces'];
+$updateModsForExistingEntities = $config['updateModsForExistingEntities'];
 
 //Read the XML File
 $xml = simplexml_load_file($sourceXMLFile);
@@ -81,6 +82,9 @@ if (!$xml){
 					$new = false;
 					$existingPID = doesEntityExist($person);
 					if ($existingPID != false) {
+						if (!$updateModsForExistingEntities){
+							continue;
+						}
 						//Load the object
 						$entity = $repository->getObject($existingPID);
 					} else {
@@ -114,6 +118,7 @@ if (!$xml){
 						}
 					}
 					$numPeopleLoaded++;
+					$i++;
 				}
 			}
 		}
@@ -131,6 +136,9 @@ if (!$xml){
 				$new = false;
 				$existingPID = doesEntityExist($event);
 				if ($existingPID != false) {
+					if (!$updateModsForExistingEntities){
+						continue;
+					}
 					//Load the object
 					$entity = $repository->getObject($existingPID);
 				} else {
@@ -161,6 +169,7 @@ if (!$xml){
 						echo("error ingesting object $e</br>");
 					}
 				}
+				$i++;
 			}
 		}
 
@@ -177,6 +186,9 @@ if (!$xml){
 				$new = false;
 				$existingPID = doesEntityExist($place);
 				if ($existingPID != false) {
+					if (!$updateModsForExistingEntities){
+						continue;
+					}
 					//Load the object
 					$entity = $repository->getObject($existingPID);
 				} else {
@@ -207,6 +219,7 @@ if (!$xml){
 						echo("error ingesting object $e</br>");
 					}
 				}
+				$i++;
 			}
 		}
 
