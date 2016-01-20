@@ -28,6 +28,7 @@ $fedoraUrl =  $config['fedoraUrl'];
 $solrUrl =  $config['solrUrl'];
 $maxRecordsToProcess = $config['maxRecordsToProcess'];
 $loadPeople = $config['loadPeople'];
+$maxPeopleToLoad = isset($config['maxPeopleToLoad']) ? $config['maxPeopleToLoad'] : -1;
 $loadEvents = $config['loadEvents'];
 $loadPlaces = $config['loadPlaces'];
 
@@ -44,7 +45,7 @@ if (!$xml){
 	require_once(ROOT_DIR . '/tuque/HttpConnection.php');
 	require_once(ROOT_DIR . '/tuque/Repository.php');
 	require_once(ROOT_DIR . '/tuque/RepositoryConnection.php');
-
+	require_once(ROOT_DIR . '/utils.php');
 	//Connect to tuque
 	try {
 		$serializer = new FedoraApiSerializer();
@@ -62,6 +63,7 @@ if (!$xml){
 
 	//Process each record
 	$i = 0;
+	$numPeopleLoaded = 0;
 
 	/** @var SimpleXMLElement $exportedItem */
 	foreach ($xml->export as $exportedItem){
@@ -73,42 +75,45 @@ if (!$xml){
 				if (strlen($person) == 0){
 					continue;
 				}
-				echo("$i) Processing $person <br/>");
-				//Check to see if the entity exists already
-				$new = false;
-				$existingPID = doesEntityExist($person);
-				if ($existingPID != false) {
-					//Load the object
-					$entity = $repository->getObject($existingPID);
-				} else {
-					//Create an entity within Islandora
-					$entity = $repository->constructObject('person');
-					$entity->models = array('islandora:personCModel');
-					$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'marmot:people');
-					$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:entity_collection');
-					$new = true;
-				}
-				$entity->label = $person;
-
-				//Add MADS data
-				if ($entity->getDatastream('MADS') == null) {
-					$madsDatastream = $entity->constructDatastream('MADS');
-				} else {
-					$madsDatastream = $entity->getDatastream('MADS');
-				}
-				$madsDatastream->label = 'MADS Record';
-				$madsDatastream->mimetype = 'text/xml';
-				$nameParts = explode(",", $person);
-				$lastName = trim($nameParts[0]);
-				$madsDatastream->setContentFromString("<mads><authority><name type=\"personal\"><namePart type=\"given\"></namePart><namePart type=\"family\">$lastName</namePart><namePart type=\"date\"/></name><titleInfo><title>$person</title></titleInfo></authority><variant><name><namePart type=\"given\"/><namePart type=\"family\"/></name></variant><affiliation><organization/><position/><email/><phone/><dateValid point=\"start\"/><dateValid point=\"end\"/></affiliation><fieldOfActivity/><identifier type=\"u1\"/><note type=\"status\"/><note type=\"history\"/><note/><note type=\"address\"/><url/></mads>");
-				$entity->ingestDatastream($madsDatastream);
-
-				if ($new) {
-					try {
-						$repository->ingestObject($entity);
-					} catch (Exception $e) {
-						echo("error ingesting object $e</br>");
+				if ($numPeopleLoaded < $maxPeopleToLoad || $maxPeopleToLoad == -1){
+					echo("$i) Processing $person <br/>");
+					//Check to see if the entity exists already
+					$new = false;
+					$existingPID = doesEntityExist($person);
+					if ($existingPID != false) {
+						//Load the object
+						$entity = $repository->getObject($existingPID);
+					} else {
+						//Create an entity within Islandora
+						$entity = $repository->constructObject('person');
+						$entity->models = array('islandora:personCModel');
+						$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'marmot:people');
+						$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:entity_collection');
+						$new = true;
 					}
+					$entity->label = $person;
+
+					//Add MADS data
+					if ($entity->getDatastream('MODS') == null) {
+						$modsDatastream = $entity->constructDatastream('MODS');
+					} else {
+						$modsDatastream = $entity->getDatastream('MODS');
+					}
+					$modsDatastream->label = 'MODS Record';
+					$modsDatastream->mimetype = 'text/xml';
+					$nameParts = explode(",", $person);
+					$lastName = trim($nameParts[0]);
+					$modsDatastream->setContentFromString("<?xml version=\"1.0\"?><mods xmlns=\"http://www.loc.gov/mods/v3\" xmlns:marmot=\"http://marmot.org/local_mods_extension\" xmlns:mods=\"http://www.loc.gov/mods/v3\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><mods:titleInfo><mods:title>{$person}</mods:title></mods:titleInfo><mods:extension><marmot:marmotLocal><marmot:familyName>{$lastName}</marmot:familyName></marmot:marmotLocal></mods:extension></mods>");
+					$entity->ingestDatastream($modsDatastream);
+
+					if ($new) {
+						try {
+							$repository->ingestObject($entity);
+						} catch (Exception $e) {
+							echo("error ingesting object $e</br>");
+						}
+					}
+					$numPeopleLoaded++;
 				}
 			}
 		}
@@ -138,16 +143,16 @@ if (!$xml){
 				}
 				$entity->label = $event;
 
-				//Add MADS data
-				if ($entity->getDatastream('EAC-CPF') == null) {
-					$eacCpfDatastream = $entity->constructDatastream('EAC-CPF');
+				//Add MODS data
+				if ($entity->getDatastream('MODS') == null) {
+					$modsEventDatastream = $entity->constructDatastream('MODS');
 				} else {
-					$eacCpfDatastream = $entity->getDatastream('EAC-CPF');
+					$modsEventDatastream = $entity->getDatastream('MODS');
 				}
-				$eacCpfDatastream->label = 'EAC-CPF Record';
-				$eacCpfDatastream->mimetype = 'text/xml';
-				$eacCpfDatastream->setContentFromString("<eac-cpf><cpfDescription><identity><entityType>person</entityType><nameEntry localType=\"primary\"><part localType=\"forename\">$event</part></nameEntry></identity><description><existDates><dateRange><fromDate notBefore=\"\" notAfter=\"\" standardDate=\"\"/><toDate notBefore=\"\" notAfter=\"\" standardDate=\"\"/></dateRange></existDates><biogHist><p/></biogHist></description></cpfDescription></eac-cpf>");
-				$entity->ingestDatastream($eacCpfDatastream);
+				$modsEventDatastream->label = 'MODS Record';
+				$modsEventDatastream->mimetype = 'text/xml';
+				$modsEventDatastream->setContentFromString("<?xml version=\"1.0\"?><mods xmlns=\"http://www.loc.gov/mods/v3\" xmlns:marmot=\"http://marmot.org/local_mods_extension\" xmlns:mods=\"http://www.loc.gov/mods/v3\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><mods:titleInfo><mods:title>{$event}</mods:title></mods:titleInfo></mods>");
+				$entity->ingestDatastream($modsEventDatastream);
 
 				if ($new) {
 					try {
@@ -160,38 +165,52 @@ if (!$xml){
 		}
 
 		//Find each place within the export & add to Islandora
+		if ($loadPlaces){
+			$places=preg_split('/\r\n|\r|\n/', $exportedItem->place);
+			foreach($places as $place) {
+				$place = trim($place);
+				if (strlen($place) == 0){
+					continue;
+				}
+				echo("$i) Processing $place <br/>");
+				//Check to see if the entity exists already
+				$new = false;
+				$existingPID = doesEntityExist($place);
+				if ($existingPID != false) {
+					//Load the object
+					$entity = $repository->getObject($existingPID);
+				} else {
+					//Create an entity within Islandora
+					$entity = $repository->constructObject('place');
+					$entity->models = array('islandora:placeCModel');
+					$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'marmot:places');
+					$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:entity_collection');
+					$new = true;
+				}
+				$entity->label = $place;
+
+				//Add MODS data
+				if ($entity->getDatastream('MODS') == null) {
+					$modsPlaceDatastream = $entity->constructDatastream('MODS');
+				} else {
+					$modsPlaceDatastream = $entity->getDatastream('MODS');
+				}
+				$modsPlaceDatastream->label = 'MODS Record';
+				$modsPlaceDatastream->mimetype = 'text/xml';
+				$modsPlaceDatastream->setContentFromString("<?xml version=\"1.0\"?><mods xmlns=\"http://www.loc.gov/mods/v3\" xmlns:marmot=\"http://marmot.org/local_mods_extension\" xmlns:mods=\"http://www.loc.gov/mods/v3\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><mods:titleInfo><mods:title>{$place}</mods:title></mods:titleInfo></mods>");
+				$entity->ingestDatastream($modsPlaceDatastream);
+
+				if ($new) {
+					try {
+						$repository->ingestObject($entity);
+					} catch (Exception $e) {
+						echo("error ingesting object $e</br>");
+					}
+				}
+			}
+		}
 
 
 	}
 	echo('Done<br/>');
-}
-
-/**
- * @param String $name
- *
- * @return bool|string Returns false if the object does not exist, or the PID if it does exist
- */
-function doesEntityExist($name){
-	global $solrUrl, $fedoraUser, $fedoraPassword;
-	$solrQuery = "?q=fgs_label_s:\"" . urlencode($name) . "\"&fl=PID,dc.title";
-
-	//echo($solrUrl . $solrQuery);
-
-	$context = stream_context_create(array(
-			'http' => array(
-					'header'  => "Authorization: Basic " . base64_encode("$fedoraUser:$fedoraPassword")
-			)
-	));
-	$solrResponse = file_get_contents($solrUrl . $solrQuery, false, $context);
-
-	if (!$solrResponse){
-		die();
-	}else{
-		$solrResponse = json_decode($solrResponse);
-		if ($solrResponse->response->numFound == 0){
-			return false;
-		}else{
-			return $solrResponse->response->docs[0]->PID;
-		}
-	}
 }

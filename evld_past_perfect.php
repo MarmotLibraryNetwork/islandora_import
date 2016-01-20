@@ -18,17 +18,17 @@ error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
 
 ini_set('implicit_flush', true);
 
-$config = ini_get('config.ini');
+$config = parse_ini_file(ROOT_DIR . '/config.ini');
 
 //Read the XML File
-$sourceXMLFile =  $config['Setup']['sourceXMLFile'];
-$baseImageLocation = $config['Setup']['baseImageLocation'];
-$fedoraPassword =  $config['Setup']['fedoraPassword'];
-$fedoraUser =  $config['Setup']['fedoraUser'];
-$fedoraUrl =  $config['Setup']['fedoraUrl'];
-$solrUrl =  $config['Setup']['solrUrl'];
-$maxRecordsToProcess = $config['Setup']['maxRecordsToProcess'];
-$processAllFiles = $config['Setup']['processAllFiles'];
+$sourceXMLFile =  $config['sourceXMLFile'];
+$baseImageLocation = $config['baseImageLocation'];
+$fedoraPassword =  $config['fedoraPassword'];
+$fedoraUser =  $config['fedoraUser'];
+$fedoraUrl =  $config['fedoraUrl'];
+$solrUrl =  $config['solrUrl'];
+$maxRecordsToProcess = $config['maxRecordsToProcess'];
+$processAllFiles = $config['processAllFiles'];
 
 $xml = simplexml_load_file($sourceXMLFile);
 if (!$xml){
@@ -42,6 +42,7 @@ if (!$xml){
 	require_once(ROOT_DIR . '/tuque/HttpConnection.php');
 	require_once(ROOT_DIR . '/tuque/Repository.php');
 	require_once(ROOT_DIR . '/tuque/RepositoryConnection.php');
+	require_once(ROOT_DIR . '/utils.php');
 
 	//Connect to tuque
 	try {
@@ -134,6 +135,7 @@ if (!$xml){
 				$solrResponse = json_decode($solrResponse);
 				if ($solrResponse->response->numFound == 0){
 					$newObject = true;
+					$existingPID = false;
 				}else{
 					$newObject = false;
 					$existingPID = $solrResponse->response->docs[0]->PID;

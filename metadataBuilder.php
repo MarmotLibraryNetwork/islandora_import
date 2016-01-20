@@ -84,27 +84,39 @@ function build_evld_mods_data($title, $exportedItem){
 	$mods .= "</marmot:hasPublisher>\r\n";
 	$people=preg_split('/\r\n|\r|\n/', $exportedItem->people);
 	foreach($people as $person){
-		$mods .= "<marmot:relatedEntity type='person'>\r\n";
-		$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
-		$mods .="<marmot:entityTitle>".htmlspecialchars($person)."</marmot:entityTitle>\r\n";
-		$mods .="<marmot:entityRelationshipNote/>\r\n";
-		$mods .= "</marmot:relatedEntity>\r\n";
+		$person = trim($person);
+		if (strlen($person) > 0){
+			$mods .= "<marmot:relatedEntity type='person'>\r\n";
+			$personPID = doesEntityExist($person);
+			$mods .= "<marmot:entityPid>{$personPID}</marmot:entityPid>\r\n";
+			$mods .="<marmot:entityTitle>".htmlspecialchars($person)."</marmot:entityTitle>\r\n";
+			$mods .="<marmot:entityRelationshipNote/>\r\n";
+			$mods .= "</marmot:relatedEntity>\r\n";
+		}
 	}
 	$places=preg_split('/\r\n|\r|\n/', $exportedItem->place);
 	foreach ($places as $place) {
-		$mods .= "<marmot:relatedEntity type='place'>\r\n";
-		$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
-		$mods .= "<marmot:entityTitle>" . htmlspecialchars($place)."</marmot:entityTitle>\r\n";
-		$mods .="<marmot:entityRelationshipNote/>\r\n";
-		$mods .= "</marmot:relatedEntity>\r\n";
+		$place = trim($place);
+		if (strlen($place) > 0){
+			$mods .= "<marmot:relatedEntity type='place'>\r\n";
+			$placePID = doesEntityExist($place);
+			$mods .= "<marmot:entityPid>{$placePID}</marmot:entityPid>\r\n";
+			$mods .= "<marmot:entityTitle>" . htmlspecialchars($place)."</marmot:entityTitle>\r\n";
+			$mods .="<marmot:entityRelationshipNote/>\r\n";
+			$mods .= "</marmot:relatedEntity>\r\n";
+		}
 	}
 	$events=preg_split('/\r\n|\r|\n/', $exportedItem->event);
 	foreach ($events as $event) {
-		$mods .= "<marmot:relatedEntity type='event'>\r\n";
-		$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
-		$mods .= "<marmot:entityTitle>".htmlspecialchars($event)."</marmot:entityTitle>\r\n";
-		$mods .="<marmot:entityRelationshipNote/>\r\n";
-		$mods .= "</marmot:relatedEntity>\r\n";
+		$event = trim($event);
+		if (strlen($event) > 0) {
+			$mods .= "<marmot:relatedEntity type='event'>\r\n";
+			$eventPID = doesEntityExist($event);
+			$mods .= "<marmot:entityPid>{$eventPID}</marmot:entityPid>\r\n";
+			$mods .= "<marmot:entityTitle>" . htmlspecialchars($event) . "</marmot:entityTitle>\r\n";
+			$mods .="<marmot:entityRelationshipNote/>\r\n";
+			$mods .= "</marmot:relatedEntity>\r\n";
+		}
 	}
 	$mods .= "</marmot:marmotLocal>\r\n";
 	$mods .= "<marmot:contextNotes>".htmlspecialchars($exportedItem->notes)."</marmot:contextNotes>\r\n";
