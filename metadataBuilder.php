@@ -82,29 +82,30 @@ function build_evld_mods_data($title, $exportedItem){
 	$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
 	$mods .= "<marmot:entityTitle>".htmlspecialchars($exportedItem->studio)."</marmot:entityTitle>\r\n";
 	$mods .= "</marmot:hasPublisher>\r\n";
-	$mods .= "<marmot:relatedEntity>\r\n";
 	$people=preg_split('/\r\n|\r|\n/', $exportedItem->people);
 	foreach($people as $person){
-		$mods .= "<relatedEntity type='person'>\r\n";
+		$mods .= "<marmot:relatedEntity type='person'>\r\n";
 		$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
 		$mods .="<marmot:entityTitle>".htmlspecialchars($person)."</marmot:entityTitle>\r\n";
-		$mods .= "</relatedEntity>\r\n";
+		$mods .="<marmot:entityRelationshipNote/>\r\n";
+		$mods .= "</marmot:relatedEntity>\r\n";
 	}
 	$places=preg_split('/\r\n|\r|\n/', $exportedItem->place);
 	foreach ($places as $place) {
-		$mods .= "<relatedEntity type='place'>\r\n";
+		$mods .= "<marmot:relatedEntity type='place'>\r\n";
 		$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
 		$mods .= "<marmot:entityTitle>" . htmlspecialchars($place)."</marmot:entityTitle>\r\n";
-		$mods .= "</relatedEntity>\r\n";
+		$mods .="<marmot:entityRelationshipNote/>\r\n";
+		$mods .= "</marmot:relatedEntity>\r\n";
 	}
 	$events=preg_split('/\r\n|\r|\n/', $exportedItem->event);
 	foreach ($events as $event) {
-		$mods .= "<relatedEntity type='event'>\r\n";
+		$mods .= "<marmot:relatedEntity type='event'>\r\n";
 		$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
 		$mods .= "<marmot:entityTitle>".htmlspecialchars($event)."</marmot:entityTitle>\r\n";
-		$mods .= "</relatedEntity>\r\n";
+		$mods .="<marmot:entityRelationshipNote/>\r\n";
+		$mods .= "</marmot:relatedEntity>\r\n";
 	}
-	$mods .= "</marmot:relatedEntity>\r\n";
 	$mods .= "</marmot:marmotLocal>\r\n";
 	$mods .= "<marmot:contextNotes>".htmlspecialchars($exportedItem->notes)."</marmot:contextNotes>\r\n";
 	$mods .= "<marmot:relationshipNotes>".htmlspecialchars($exportedItem->relnotes)."</marmot:relationshipNotes>\r\n";
