@@ -19,18 +19,22 @@ function build_evld_mods_data($title, $exportedItem){
 	$mods .= "<identifier>".htmlspecialchars($exportedItem->objectid)."</identifier>\r\n";
 	$mods .= "<part>".htmlspecialchars($exportedItem->imageno)."</part>\r\n";
 	$mods .= "<abstract>".htmlspecialchars($exportedItem->descrip)."</abstract>\r\n";
-	$mods .= "<subject>\r\n";
+	$mods .= "<subject authority='local'>\r\n";
 	$classes=preg_split('/\r\n|\r|\n/', $exportedItem->classes);
 	foreach($classes as $class){
-		$mods .= "<subject>".htmlspecialchars($class)."</subject>\r\n";
+		$mods .= "<topic>".htmlspecialchars($class)."</topic>\r\n";
 	}
+	$mods .= "</subject>\r\n";
+	$mods .= "<subject authority='local'>\r\n";
 	$sterms=preg_split('/\r\n|\r|\n/', $exportedItem->sterms);
 	foreach($sterms as $sterm){
-		$mods .= "<subject>".htmlspecialchars($sterm)."</subject>\r\n";
+		$mods .= "<topic>".htmlspecialchars($sterm)."</topic>\r\n";
 	}
+	$mods .= "</subject>\r\n";
+	$mods .= "<subject authority='local'>\r\n";
 	$subjects=preg_split('/\r\n|\r|\n/', $exportedItem->subjects);
 	foreach($subjects as $subject){
-		$mods .= "<subject>".htmlspecialchars($subject)."</subject>\r\n";
+		$mods .= "<topic>".htmlspecialchars($subject)."</topic>\r\n";
 	}
 	$mods .= "</subject>\r\n";
 	$mods .= "<originInfo>\r\n";
@@ -62,33 +66,42 @@ function build_evld_mods_data($title, $exportedItem){
 	$mods .= "<shelfLocator>".htmlspecialchars($exportedItem->locfield6)."</shelfLocator>\r\n";
 	$mods .= "<shelfLocator>".htmlspecialchars($exportedItem->negloc)."</shelfLocator>\r\n";
 	$mods .= "<shelfLocator>".htmlspecialchars($exportedItem->negno)."</shelfLocator>\r\n";
-	$mods .= "<accessCondition type='migrated'>".htmlspecialchars($exportedItem->copyright)."</accessCondition>\r\n";
-	$mods .= "<accessCondition type='migrated'>".htmlspecialchars($exportedItem->legal)."</accessCondition>\r\n";
-	$mods .= "<name>".htmlspecialchars($exportedItem->provenance)."<role><roleTerm>Donor</roleTerm></role></name>\r\n";
+	$mods .= "<accessCondition><marmot:typeOfStatement>local</marmot:typeOfStatement>\r\n";
+    $mods .= "<marmot:rightsStatement>".htmlspecialchars($exportedItem->copyright)."</marmot:rightsStatement>\r\n";
+	$mods .= "</accessCondition>\r\n";
+	$mods .= "<accessCondition><marmot:typeOfStatement>local</marmot:typeOfStatement>\r\n";
+	$mods .= "<marmot:rightsStatement>".htmlspecialchars($exportedItem->legal)."</marmot:rightsStatement>\r\n";
+	$mods .= "</accessCondition>\r\n";
+	$mods .= "<name>\r\n";
+    $mods .= "<namePart>".htmlspecialchars($exportedItem->provenance)."</namePart>\r\n";
+	$mods .= "<role><roleTerm>Donor</roleTerm></role>\r\n";
+	$mods .= "</name>\r\n";
 	$mods .= "<extension>\r\n";
 	$mods .= "<marmot:marmotLocal>\r\n";
-	$mods .= "<marmot:publisher>\r\n";
-	$mods .= "<publisher>\r\n";
-	$mods .= "<marmot:publisherName>".htmlspecialchars($exportedItem->studio)."</marmot:publisherName>\r\n";
-	$mods .= "</publisher>\r\n";
-	$mods .= "</marmot:publisher>\r\n";
+	$mods .= "<marmot:hasPublisher>\r\n";
+	$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
+	$mods .= "<marmot:entityTitle>".htmlspecialchars($exportedItem->studio)."</marmot:entityTitle>\r\n";
+	$mods .= "</marmot:hasPublisher>\r\n";
 	$mods .= "<marmot:relatedEntity>\r\n";
 	$people=preg_split('/\r\n|\r|\n/', $exportedItem->people);
 	foreach($people as $person){
 		$mods .= "<relatedEntity type='person'>\r\n";
-		$mods .="<marmot:entity>".htmlspecialchars($person)."</marmot:entity>\r\n";
+		$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
+		$mods .="<marmot:entityTitle>".htmlspecialchars($person)."</marmot:entityTitle>\r\n";
 		$mods .= "</relatedEntity>\r\n";
 	}
 	$places=preg_split('/\r\n|\r|\n/', $exportedItem->place);
 	foreach ($places as $place) {
 		$mods .= "<relatedEntity type='place'>\r\n";
-		$mods .= "<marmot:entity>" . htmlspecialchars($place)."</marmot:entity>\r\n";
+		$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
+		$mods .= "<marmot:entityTitle>" . htmlspecialchars($place)."</marmot:entityTitle>\r\n";
 		$mods .= "</relatedEntity>\r\n";
 	}
 	$events=preg_split('/\r\n|\r|\n/', $exportedItem->event);
 	foreach ($events as $event) {
 		$mods .= "<relatedEntity type='event'>\r\n";
-		$mods .= "<marmot:entity>".htmlspecialchars($event)."</marmot:entity>\r\n";
+		$mods .= "<marmot:entityPid></marmot:entityPid>\r\n";
+		$mods .= "<marmot:entityTitle>".htmlspecialchars($event)."</marmot:entityTitle>\r\n";
 		$mods .= "</relatedEntity>\r\n";
 	}
 	$mods .= "</marmot:relatedEntity>\r\n";
