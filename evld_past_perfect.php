@@ -140,8 +140,6 @@ if (!$xml){
 					if ($processAllFiles == false){
 						continue;
 					}
-
-
 				}
 			}
 
@@ -152,6 +150,7 @@ if (!$xml){
 			$namespace = 'evld';
 
 			//Create an object (this will create a new PID)
+			/** @var AbstractFedoraObject $newPhoto */
 			if ($newObject){
 				$newPhoto = $repository->constructObject($namespace);
 			}else{
@@ -159,6 +158,8 @@ if (!$xml){
 			}
 
 			if ($newObject){
+				//$newPhoto->relationships->add()
+
 				//TODO: if we get a tiff this can be a large image, otherwise it should be a basic imag
 				if (strtolower(substr($imageFilename, -3)) == 'jpg'){
 					$newPhoto->models = array('islandora:sp_basic_image');
