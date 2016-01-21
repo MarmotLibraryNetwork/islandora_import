@@ -77,7 +77,6 @@ if (!$xml){
 					continue;
 				}
 				if ($numPeopleLoaded < $maxPeopleToLoad || $maxPeopleToLoad == -1){
-					echo("$i) Processing $person <br/>");
 					//Check to see if the entity exists already
 					$new = false;
 					$existingPID = doesEntityExist($person);
@@ -95,6 +94,7 @@ if (!$xml){
 						$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:entity_collection');
 						$new = true;
 					}
+					echo("$i) Processing Person $person <br/>");
 					$entity->label = $person;
 
 					//Add MADS data
@@ -131,7 +131,6 @@ if (!$xml){
 				if (strlen($event) == 0){
 					continue;
 				}
-				echo("$i) Processing $event <br/>");
 				//Check to see if the entity exists already
 				$new = false;
 				$existingPID = doesEntityExist($event);
@@ -149,6 +148,7 @@ if (!$xml){
 					$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:entity_collection');
 					$new = true;
 				}
+				echo("$i) Processing Event $event <br/>");
 				$entity->label = $event;
 
 				//Add MODS data
@@ -181,7 +181,6 @@ if (!$xml){
 				if (strlen($place) == 0){
 					continue;
 				}
-				echo("$i) Processing $place <br/>");
 				//Check to see if the entity exists already
 				$new = false;
 				$existingPID = doesEntityExist($place);
@@ -199,6 +198,7 @@ if (!$xml){
 					$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:entity_collection');
 					$new = true;
 				}
+				echo("$i) Processing Place $place <br/>");
 				$entity->label = $place;
 
 				//Add MODS data

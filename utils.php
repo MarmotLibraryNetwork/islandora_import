@@ -15,6 +15,7 @@
  */
 function doesEntityExist($name){
 	global $solrUrl, $fedoraUser, $fedoraPassword;
+	$name = str_replace('"', '\"', $name);
 	$solrQuery = "?q=fgs_label_s:\"" . urlencode($name) . "\"&fl=PID,dc.title";
 
 	//echo($solrUrl . $solrQuery);
