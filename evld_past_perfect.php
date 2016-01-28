@@ -75,7 +75,7 @@ if (!$xml){
 	/** @var SimpleXMLElement $exportedItem */
 	foreach ($xml->export as $exportedItem){
 		$recordsRead++;
-		if ($recordsRead < $recordsToSkip){
+		if ($recordsRead <= $recordsToSkip){
 			continue;
 		}
 		//Check to see if we have the image
