@@ -289,17 +289,28 @@ if (!$xml){
 			//Add the large image
 			$largeImage = $otherImageLocation . '/lc/'. $baseImageFilename . '.png';
 			if (($newObject || ($newPhoto->getDatastream('LC') == null) || $updateLargeImagesForExistingEntities) && file_exists($largeImage)) {
+				$updateDataStream = true;
+				$newDataStream = false;
 				if ($newPhoto->getDatastream('LC') == null) {
 					$imageDatastream = $newPhoto->constructDatastream('LC');
 					$imageDatastream->label = 'Large Image for Pika';
 					$imageDatastream->mimetype = 'image/png';
+					$newDataStream = true;
 				}else{
 					$imageDatastream = $newPhoto->getDatastream('LC');
+					if ($imageDatastream->size == filesize($largeImage)){
+						$updateDataStream = false;
+					}
 				}
 
-				set_time_limit(800);
-				$imageDatastream->setContentFromFile($largeImage);
-				$newPhoto->ingestDatastream($imageDatastream);
+				if ($updateDataStream){
+					set_time_limit(800);
+					fwrite($logFile, "Uploading large image\r\n");
+					$imageDatastream->setContentFromFile($largeImage);
+					if ($newDataStream) {
+						$newPhoto->ingestDatastream($imageDatastream);
+					}
+				}
 			}
 
 			//Ingest into Islandora
