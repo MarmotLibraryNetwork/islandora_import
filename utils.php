@@ -13,8 +13,16 @@
  *
  * @return bool|string Returns false if the object does not exist, or the PID if it does exist
  */
+global $existingEntities;
+if ($existingEntities == null){
+	$existingEntities = array();
+}
 function doesEntityExist($name){
+	global $existingEntities;
 	global $solrUrl, $fedoraUser, $fedoraPassword;
+	if (array_key_exists($name, $existingEntities)){
+		return $existingEntities[$name];
+	}
 	$name = str_replace('"', '\"', $name);
 	$solrQuery = "?q=fgs_label_s:\"" . urlencode($name) . "\"&fl=PID,dc.title";
 
@@ -34,6 +42,7 @@ function doesEntityExist($name){
 		if ($solrResponse->response->numFound == 0){
 			return false;
 		}else{
+			$existingEntities[$name] = $solrResponse->response->docs[0]->PID;
 			return $solrResponse->response->docs[0]->PID;
 		}
 	}

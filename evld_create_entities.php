@@ -15,7 +15,27 @@ date_default_timezone_set('America/Denver');
 ini_set('display_errors', true);
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
 
-ini_set('implicit_flush', true);
+@apache_setenv('no-gzip', 1);
+@ini_set('zlib.output_compression', 0);
+@ini_set('implicit_flush', 1);
+session_write_close();
+for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
+ob_implicit_flush(1);
+
+for($i = 0; $i < 40000; $i++)
+{
+	echo ' '; // extra spaces
+}
+echo("<html><body>This page will import all entities into Islandora.  You must first configure it using config.ini in the same path as this file. <br />
+The page will show output while running. <br />
+You can configure the page to import
+<ul>
+<li>People</li>
+<li>Places</li>
+<li>Events</li>
+</ul></body>\r\n");
+echo("Importing entities from EVLD Past Perfect Export<br/>\r\n");
+flush();
 
 $config = parse_ini_file(ROOT_DIR . '/config.ini');
 
@@ -56,7 +76,10 @@ if (!$xml){
 		$connection->verifyPeer = false;
 		$api = new FedoraApi($connection, $serializer);
 		$repository = new FedoraRepository($api, $cache);
-		echo("Connected to Tuque OK");
+		echo("Connected to Tuque OK<br/>\r\n");
+		ob_flush();
+		flush();
+		usleep(100);
 	}catch (Exception $e){
 		echo("We could not connect to the fedora repository.");
 		die;
@@ -65,9 +88,14 @@ if (!$xml){
 	//Process each record
 	$i = 0;
 	$numPeopleLoaded = 0;
+	$numRead = 0;
+
+	global $existingEntities;
 
 	/** @var SimpleXMLElement $exportedItem */
 	foreach ($xml->export as $exportedItem){
+		$numRead++;
+		echo('.');
 		if ($loadPeople){
 			//Find each person within the export & add to Islandora
 			$people=preg_split('/\r\n|\r|\n/', $exportedItem->people);
@@ -113,8 +141,9 @@ if (!$xml){
 					if ($new) {
 						try {
 							$repository->ingestObject($entity);
+							$existingEntities[$person] = $entity->id;
 						} catch (Exception $e) {
-							echo("error ingesting object $e</br>");
+							echo("error ingesting object $e</br>\r\n");
 						}
 					}
 					$numPeopleLoaded++;
@@ -165,8 +194,9 @@ if (!$xml){
 				if ($new) {
 					try {
 						$repository->ingestObject($entity);
+						$existingEntities[$event] = $entity->id;
 					} catch (Exception $e) {
-						echo("error ingesting object $e</br>");
+						echo("error ingesting object $e</br>\r\n");
 					}
 				}
 				$i++;
@@ -215,15 +245,22 @@ if (!$xml){
 				if ($new) {
 					try {
 						$repository->ingestObject($entity);
+						$existingEntities[$place] = $entity->id;
 					} catch (Exception $e) {
-						echo("error ingesting object $e</br>");
+						echo("error ingesting object $e</br>\r\n");
 					}
 				}
 				$i++;
 			}
 		}
-
-
+		//End processing this record
+		if ($numRead % 100 == 0){
+			echo("Processed $numRead Records\r\n");
+			flush();
+			set_time_limit(120);
+		}
+		flush();
 	}
-	echo('Done<br/>');
+	echo('Done<br/></html>\r\n');
+	flush();
 }
