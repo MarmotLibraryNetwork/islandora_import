@@ -23,12 +23,20 @@ $config = parse_ini_file(ROOT_DIR . '/config.ini');
 //Read the XML File
 $sourceXMLFile =  $config['sourceXMLFile'];
 $baseImageLocation = $config['baseImageLocation'];
+$jp2ImageLocation = $config['jp2ImageLocation'];
+$otherImageLocation = $config['otherImageLocation'];
+$updateLargeImagesForExistingEntities = $config['updateLargeImagesForExistingEntities'];
 $fedoraPassword =  $config['fedoraPassword'];
 $fedoraUser =  $config['fedoraUser'];
 $fedoraUrl =  $config['fedoraUrl'];
 $solrUrl =  $config['solrUrl'];
 $maxRecordsToProcess = $config['maxRecordsToProcess'];
 $processAllFiles = $config['processAllFiles'];
+$logPath = $config['logPath'];
+if(!file_exists($logPath)){
+	mkdir($logPath);
+}
+$logFile = fopen($logPath . "import". time() . ".log", 'w');
 
 $xml = simplexml_load_file($sourceXMLFile);
 if (!$xml){
@@ -68,7 +76,7 @@ if (!$xml){
 		$imageFilename = trim($exportedItem->imagefile);
 		if (strlen($imageFilename) == 0){
 			//No point importing something that doesn't have a file
-			echo("Warning, " . $exportedItem->objectid . ' has no image defined for it, skipping.<br/>');
+			fwrite($logFile, "Warning, " . $exportedItem->objectid . " has no image defined for it, skipping.\r\n");
 			continue;
 		}
 
@@ -115,7 +123,7 @@ if (!$xml){
 			$objectId = (string)$exportedItem->objectid;
 
 
-			echo("$i) Processing $objectId ($title) <br/>");
+			fwrite($logFile, "$i) Processing $objectId ($title) \r\n");
 
 			//Check Solr to see if we have processed this already
 			$solrQuery = "?q=mods_identifier_t:$objectId&fl=PID,dc.title";
@@ -231,7 +239,7 @@ if (!$xml){
 			}
 
 			//Add the JP2 derivative
-			$jp2Image = $baseImageLocation . '/derivatives/jp2/'. $baseImageFilename . '.jp2';
+			$jp2Image = $jp2ImageLocation . $baseImageFilename . '.jp2';
 			if (($newObject || ($newPhoto->getDatastream('JP2') == null)) && file_exists($jp2Image)) {
 				$imageDatastream = $newPhoto->constructDatastream('JP2');
 				$imageDatastream->label = 'JPEG 2000';
@@ -243,7 +251,7 @@ if (!$xml){
 			}
 
 			//Add the thumbnail
-			$tnImage = $baseImageLocation . '/derivatives/tn/'. $baseImageFilename . '.jpg';
+			$tnImage = $otherImageLocation . '/tn/'. $baseImageFilename . '.jpg';
 			if (($newObject || ($newPhoto->getDatastream('TN') == null)) && file_exists($tnImage)) {
 				$imageDatastream = $newPhoto->constructDatastream('TN');
 				$imageDatastream->label = 'Thumbnail';
@@ -255,7 +263,7 @@ if (!$xml){
 			}
 
 			//Add the small image
-			$smallImage = $baseImageLocation . '/derivatives/small/'. $baseImageFilename . '.png';
+			$smallImage = $otherImageLocation . '/sc/'. $baseImageFilename . '.png';
 			if (($newObject || ($newPhoto->getDatastream('SC') == null)) && file_exists($smallImage)) {
 				$imageDatastream = $newPhoto->constructDatastream('SC');
 				$imageDatastream->label = 'Small Image for Pika';
@@ -267,7 +275,7 @@ if (!$xml){
 			}
 
 			//Add the medium image
-			$mediumImage = $baseImageLocation . '/derivatives/medium/'. $baseImageFilename . '.png';
+			$mediumImage = $otherImageLocation . '/mc/'. $baseImageFilename . '.png';
 			if (($newObject || ($newPhoto->getDatastream('MC') == null)) && file_exists($mediumImage)) {
 				$imageDatastream = $newPhoto->constructDatastream('MC');
 				$imageDatastream->label = 'Medium Image for Pika';
@@ -279,11 +287,15 @@ if (!$xml){
 			}
 
 			//Add the large image
-			$largeImage = $baseImageLocation . '/derivatives/large/'. $baseImageFilename . '.png';
-			if (($newObject || ($newPhoto->getDatastream('LC') == null)) && file_exists($largeImage)) {
-				$imageDatastream = $newPhoto->constructDatastream('LC');
-				$imageDatastream->label = 'Large Image for Pika';
-				$imageDatastream->mimetype = 'image/png';
+			$largeImage = $otherImageLocation . '/lc/'. $baseImageFilename . '.png';
+			if (($newObject || ($newPhoto->getDatastream('LC') == null) || $updateLargeImagesForExistingEntities) && file_exists($largeImage)) {
+				if ($newPhoto->getDatastream('LC') == null) {
+					$imageDatastream = $newPhoto->constructDatastream('LC');
+					$imageDatastream->label = 'Large Image for Pika';
+					$imageDatastream->mimetype = 'image/png';
+				}else{
+					$imageDatastream = $newPhoto->getDatastream('LC');
+				}
 
 				set_time_limit(800);
 				$imageDatastream->setContentFromFile($largeImage);
@@ -295,19 +307,20 @@ if (!$xml){
 			if ($newObject){
 				try{
 					$repository->ingestObject($newPhoto);
+					fwrite($logFile, "Created object " . $newPhoto->id . "\r\n");
 				}catch(Exception $e){
-					echo("error ingesting object $e</br>");
+					fwrite($logFile, "error ingesting object $e\r\n");
 				}
+			}else{
+				fwrite($logFile, "Updated object " . $newPhoto->id . "\r\n");
 			}
-
-			echo("Created object " . $newPhoto->id . "</br>");
 
 			if ($i >= $maxRecordsToProcess){
 				break;
 			}
 		}
 	}
-	echo('Done<br/>');
+	fwrite($logFile, "Done\r\n");
 }
 
 
