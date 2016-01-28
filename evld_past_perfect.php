@@ -30,6 +30,7 @@ $fedoraPassword =  $config['fedoraPassword'];
 $fedoraUser =  $config['fedoraUser'];
 $fedoraUrl =  $config['fedoraUrl'];
 $solrUrl =  $config['solrUrl'];
+$recordsToSkip = isset($config['recordsToSkip']) ? $config['recordsToSkip'] : 0;
 $maxRecordsToProcess = $config['maxRecordsToProcess'];
 $processAllFiles = $config['processAllFiles'];
 $logPath = $config['logPath'];
@@ -68,10 +69,15 @@ if (!$xml){
 	}
 
 	//Process each record
-	$i = 0;
+	$recordsProcessed = 0;
+	$recordsRead = 0;
 
 	/** @var SimpleXMLElement $exportedItem */
 	foreach ($xml->export as $exportedItem){
+		$recordsRead++;
+		if ($recordsRead < $recordsToSkip){
+			continue;
+		}
 		//Check to see if we have the image
 		$imageFilename = trim($exportedItem->imagefile);
 		if (strlen($imageFilename) == 0){
@@ -84,8 +90,6 @@ if (!$xml){
 		if (empty($title)){
 			$title = trim($exportedItem->caption);
 		}
-
-
 
 		$validImage = false;
 
@@ -118,12 +122,12 @@ if (!$xml){
 
 		//Make sure that the image exists in what we have downloaded
 		if ($validImage){
-			$i++;
+			$recordsProcessed++;
 
 			$objectId = (string)$exportedItem->objectid;
 
 
-			fwrite($logFile, "$i) Processing $objectId ($title) \r\n");
+			fwrite($logFile, "$recordsProcessed) Processing $objectId ($title) \r\n");
 
 			//Check Solr to see if we have processed this already
 			$solrQuery = "?q=mods_identifier_t:$objectId&fl=PID,dc.title";
@@ -326,7 +330,7 @@ if (!$xml){
 				fwrite($logFile, "Updated object " . $newPhoto->id . "\r\n");
 			}
 
-			if ($i >= $maxRecordsToProcess){
+			if ($recordsProcessed >= $maxRecordsToProcess){
 				break;
 			}
 		}
