@@ -310,7 +310,12 @@ if (!$xml){
 				if ($updateDataStream){
 					set_time_limit(800);
 					fwrite($logFile, "Uploading large image\r\n");
-					$imageDatastream->setContentFromFile($largeImage);
+					try{
+						$imageDatastream->setContentFromFile($largeImage);
+					}catch(Exception $e){
+						fwrite($logFile, "error uploading large image $e\r\n");
+					}
+
 					if ($newDataStream) {
 						$newPhoto->ingestDatastream($imageDatastream);
 					}
