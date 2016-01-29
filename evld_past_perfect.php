@@ -215,7 +215,9 @@ if (!$xml){
 			$modsDatastream->setContentFromString($modsData);
 
 			//Add the MODS datastream to the object
-			$newPhoto->ingestDatastream($modsDatastream);
+			if ($newObject) {
+				$newPhoto->ingestDatastream($modsDatastream);
+			}
 
 			//TODO: Update Dublin Core datastream?
 

@@ -27,7 +27,8 @@ function doesEntityExist($name){
 	$solrQuery = "?q=fgs_label_s:\"" . urlencode($name) . "\"&fl=PID,dc.title";
 
 	//echo($solrUrl . $solrQuery);
-
+	//Give Solr some time to respond
+	set_time_limit(60);
 	$context = stream_context_create(array(
 			'http' => array(
 					'header'  => "Authorization: Basic " . base64_encode("$fedoraUser:$fedoraPassword")
