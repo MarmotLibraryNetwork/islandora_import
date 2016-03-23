@@ -23,9 +23,11 @@ $config = parse_ini_file(ROOT_DIR . '/config.ini');
 //Read the XML File
 $sourceXMLFile =  $config['sourceXMLFile'];
 $baseImageLocation = $config['baseImageLocation'];
+$baseImageLocationJPG = $config['baseImageLocationJPG'];
 $jp2ImageLocation = $config['jp2ImageLocation'];
 $otherImageLocation = $config['otherImageLocation'];
 $updateLargeImagesForExistingEntities = $config['updateLargeImagesForExistingEntities'];
+$updateModsForExistingEntities = $config['updateModsForExistingEntities'];
 $fedoraPassword =  $config['fedoraPassword'];
 $fedoraUser =  $config['fedoraUser'];
 $fedoraUrl =  $config['fedoraUrl'];
@@ -38,6 +40,8 @@ if(!file_exists($logPath)){
 	mkdir($logPath);
 }
 $logFile = fopen($logPath . "import". time() . ".log", 'w');
+$basicImageNames = fopen($logPath . "basicImages.log", 'w');
+$recordsNoImage = fopen($logPath . "noImageRecords.log", 'w');
 
 $xml = simplexml_load_file($sourceXMLFile);
 if (!$xml){
@@ -104,6 +108,12 @@ if (!$xml){
 		}elseif (file_exists($baseImageLocation . $imageFilename)){
 			//TIFF doesn't exist, try the jpg
 			$validImage =true;
+		}elseif (file_exists($baseImageLocationJPG . $tifFilename)){
+			$imageFilename = $tifFilename;
+			$validImage = true;
+		}elseif (file_exists($baseImageLocationJPG . $imageFilename)){
+			//TIFF doesn't exist, try the jpg
+			$validImage =true;
 		}
 
 		if (!$validImage){
@@ -118,6 +128,20 @@ if (!$xml){
 				}
 			}
 		}
+
+		if (!$validImage){
+			//Check the objectid to see if we have an image with that name
+			$imageFilename = $exportedItem->objectid . ".tif";
+			if (file_exists($baseImageLocationJPG . $imageFilename)){
+				$validImage = true;
+			}else{
+				$imageFilename = $exportedItem->objectid . ".jpg";
+				if (file_exists($baseImageLocationJPG . $imageFilename)){
+					$validImage = true;
+				}
+			}
+		}
+
 		$baseImageFilename = substr($imageFilename, 0, strrpos($imageFilename, '.'));
 
 		//Make sure that the image exists in what we have downloaded
@@ -127,7 +151,7 @@ if (!$xml){
 			$objectId = (string)$exportedItem->objectid;
 
 
-			fwrite($logFile, "$recordsProcessed) Processing $objectId ($title) \r\n");
+			fwrite($logFile, date('Y-m-d H:i:s')."$recordsProcessed) Processing $objectId ($title) \r\n");
 
 			//Check Solr to see if we have processed this already
 			$solrQuery = "?q=mods_identifier_t:$objectId&fl=PID,dc.title";
@@ -170,17 +194,20 @@ if (!$xml){
 			}else{
 				$newPhoto = $repository->getObject($existingPID);
 			}
-
+			if (strtolower(substr($imageFilename, -3)) == 'jpg'){
+				fwrite($basicImageNames, "$imageFilename \r\n");
+				$isLargeImage=false;
+			}else{
+				$isLargeImage=true;
+			}
 			if ($newObject){
 				//$newPhoto->relationships->add()
 
 				//TODO: if we get a tiff this can be a large image, otherwise it should be a basic imag
 				if (strtolower(substr($imageFilename, -3)) == 'jpg'){
 					$newPhoto->models = array('islandora:sp_basic_image');
-					$isLargeImage = false;
 				}else{
 					$newPhoto->models = array('islandora:sp_large_image_cmodel');
-					$isLargeImage = true;
 				}
 
 				$newPhoto->label = $title;
@@ -193,30 +220,46 @@ if (!$xml){
 					$newPhoto->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:sp_basic_image_collection');
 				}
 			}
+			if ($newObject || $updateModsForExistingEntities){
+				//Create MODS data
+				/** @var NewFedoraDatastream $modsDatastream */
+				if ($newObject){
+					$modsDatastream = $newPhoto->constructDatastream('MODS');
+					$modsDatastream->label = 'MODS Record';
+					$modsDatastream->mimetype = 'text/xml';
+				}else{
+					$modsDatastream = $newPhoto->getDatastream('MODS');
+				}
 
-			//Create MODS data
-			/** @var NewFedoraDatastream $modsDatastream */
-			if ($newObject){
-				$modsDatastream = $newPhoto->constructDatastream('MODS');
-			}else{
-				$modsDatastream = $newPhoto->getDatastream('MODS');
+
+
+				//Build our MODS data
+				include_once 'metadataBuilder.php';
+				$modsData = build_evld_mods_data($title, $exportedItem);
+
+				file_put_contents("C:/data/islandora_conversions/evld/mods/{$exportedItem->objectid}.xml",$modsData);
+
+				//Add Mods data to the datastream
+
+				if ($modsDatastream->size != strlen($modsData)){
+					$modsDatastream->setContentFromString($modsData);
+				}
+				//Add the MODS datastream to the object
+				if ($newObject) {
+					$newPhoto->ingestDatastream($modsDatastream);
+				}
 			}
 
-			$modsDatastream->label = 'MODS Record';
-			$modsDatastream->mimetype = 'text/xml';
 
-			//Build our MODS data
-			include_once 'metadataBuilder.php';
-			$modsData = build_evld_mods_data($title, $exportedItem);
-
-			file_put_contents("C:/data/islandora_conversions/evld/mods/{$exportedItem->objectid}.xml",$modsData);
-
-			//Add Mods data to the datastream
-			$modsDatastream->setContentFromString($modsData);
-
-			//Add the MODS datastream to the object
-			if ($newObject) {
-				$newPhoto->ingestDatastream($modsDatastream);
+			if ($newObject){
+				try{
+					$repository->ingestObject($newPhoto);
+					fwrite($logFile, date('Y-m-d H:i:s')."Created object " . $newPhoto->id . "\r\n");
+				}catch(Exception $e){
+					fwrite($logFile, date('Y-m-d H:i:s')."error ingesting object $e\r\n");
+				}
+			}else{
+				fwrite($logFile, date('Y-m-d H:i:s')."Updated object " . $newPhoto->id . "\r\n");
 			}
 
 			//TODO: Update Dublin Core datastream?
@@ -227,21 +270,32 @@ if (!$xml){
 				$imageDatastream->label = 'Original metadata migrated from Past Perfect';
 				$imageDatastream->mimetype = 'text/xml';
 
-				set_time_limit(800);
+				set_time_limit(1600);
 				$imageDatastream->setContentFromString($exportedItem->asXML());
 				$newPhoto->ingestDatastream($imageDatastream);
 			}
 
 			//Create Image data
-			if ($newObject || ($newPhoto->getDatastream('OBJ') == null)) {
-				$imageDatastream = $newPhoto->constructDatastream('OBJ');
+			if ($newObject || ($newPhoto->getDatastream('OBJ') == null) || !$isLargeImage) {
+				if ($newPhoto->getDatastream('OBJ') == null){
+					$imageDatastream = $newPhoto->constructDatastream('OBJ');
+				}else {
+					$imageDatastream = $newPhoto->getDatastream('OBJ');
+				}
+
 
 				$imageDatastream->label = $imageFilename;
-				$imageDatastream->mimetype = 'image/tiff';
+				if ($isLargeImage){
+					$imageDatastream->mimetype = 'image/tiff';
+				}else {
+					$imageDatastream->mimetype = 'image/jpg';
+				}
 
-				set_time_limit(800);
+
+				set_time_limit(1600);
 				$imageDatastream->setContentFromFile($baseImageLocation . $imageFilename);
 				$newPhoto->ingestDatastream($imageDatastream);
+				unset($imageDatastream);
 			}
 
 			//Add the JP2 derivative
@@ -251,9 +305,10 @@ if (!$xml){
 				$imageDatastream->label = 'JPEG 2000';
 				$imageDatastream->mimetype = 'image/jpg2';
 
-				set_time_limit(800);
+				set_time_limit(1600);
 				$imageDatastream->setContentFromFile($jp2Image);
 				$newPhoto->ingestDatastream($imageDatastream);
+				unset($imageDatastream);
 			}
 
 			//Add the thumbnail
@@ -263,9 +318,10 @@ if (!$xml){
 				$imageDatastream->label = 'Thumbnail';
 				$imageDatastream->mimetype = 'image/jpg';
 
-				set_time_limit(800);
+				set_time_limit(1600);
 				$imageDatastream->setContentFromFile($tnImage);
 				$newPhoto->ingestDatastream($imageDatastream);
+				unset($imageDatastream);
 			}
 
 			//Add the small image
@@ -275,9 +331,10 @@ if (!$xml){
 				$imageDatastream->label = 'Small Image for Pika';
 				$imageDatastream->mimetype = 'image/png';
 
-				set_time_limit(800);
+				set_time_limit(1600);
 				$imageDatastream->setContentFromFile($smallImage);
 				$newPhoto->ingestDatastream($imageDatastream);
+				unset($imageDatastream);
 			}
 
 			//Add the medium image
@@ -287,9 +344,10 @@ if (!$xml){
 				$imageDatastream->label = 'Medium Image for Pika';
 				$imageDatastream->mimetype = 'image/png';
 
-				set_time_limit(800);
+				set_time_limit(1600);
 				$imageDatastream->setContentFromFile($mediumImage);
 				$newPhoto->ingestDatastream($imageDatastream);
+				unset($imageDatastream);
 			}
 
 			//Add the large image
@@ -310,39 +368,37 @@ if (!$xml){
 				}
 
 				if ($updateDataStream){
-					set_time_limit(800);
-					fwrite($logFile, "Uploading large image\r\n");
+					set_time_limit(1600);
+					fwrite($logFile, date('Y-m-d H:i:s')."Uploading large image\r\n");
 					try{
 						$imageDatastream->setContentFromFile($largeImage);
 					}catch(Exception $e){
-						fwrite($logFile, "error uploading large image $e\r\n");
+						fwrite($logFile, date('Y-m-d H:i:s')."error uploading large image $e\r\n");
 					}
 
 					if ($newDataStream) {
 						$newPhoto->ingestDatastream($imageDatastream);
+						unset($imageDatastream);
 					}
 				}
 			}
 
 			//Ingest into Islandora
 
-			if ($newObject){
-				try{
-					$repository->ingestObject($newPhoto);
-					fwrite($logFile, "Created object " . $newPhoto->id . "\r\n");
-				}catch(Exception $e){
-					fwrite($logFile, "error ingesting object $e\r\n");
-				}
-			}else{
-				fwrite($logFile, "Updated object " . $newPhoto->id . "\r\n");
-			}
+			fwrite($logFile, date('Y-m-d H:i:s')."Done with {$newPhoto->id}\r\n");
 
 			if ($recordsProcessed >= $maxRecordsToProcess){
 				break;
 			}
+			set_time_limit(60);
+		}else{
+			fwrite($recordsNoImage, "{$exportedItem->objectid}\r\n");
 		}
 	}
-	fwrite($logFile, "Done\r\n");
+	fwrite($logFile, date('Y-m-d H:i:s')."Done\r\n");
+	fclose($logFile);
+	fclose($basicImageNames);
+	fclose($recordsNoImage);
 }
 
 
