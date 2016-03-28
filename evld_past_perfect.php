@@ -181,9 +181,6 @@ if (!$xml){
 				}
 			}
 
-
-
-
 			//Basic settings for this content type
 			$namespace = 'evld';
 

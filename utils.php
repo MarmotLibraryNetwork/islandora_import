@@ -48,3 +48,55 @@ function doesEntityExist($name){
 		}
 	}
 }
+
+function createPerson($repository, $personName){
+	$existingPID = doesEntityExist($personName);
+	if ($existingPID){
+		return $existingPID;
+	}else{
+		//Create an entity within Islandora
+		$entity = $repository->constructObject('person');
+		$entity->models = array('islandora:personCModel');
+		$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'marmot:people');
+		$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:entity_collection');
+
+		$entity->label = $personName;
+		$modsDatastream = $entity->constructDatastream('MODS');
+
+		$modsDatastream->label = 'MODS Record';
+		$modsDatastream->mimetype = 'text/xml';
+		$nameParts = explode(",", $personName);
+		$lastName = trim($nameParts[0]);
+		$modsDatastream->setContentFromString("<?xml version=\"1.0\"?><mods xmlns=\"http://www.loc.gov/mods/v3\" xmlns:marmot=\"http://marmot.org/local_mods_extension\" xmlns:mods=\"http://www.loc.gov/mods/v3\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><mods:titleInfo><mods:title>{$personName}</mods:title></mods:titleInfo><mods:extension><marmot:marmotLocal><marmot:familyName>{$lastName}</marmot:familyName><marmot:pikaOptions><marmot:includeInPika>yes</marmot:includeInPika><marmot:showInSearchResults>yes</marmot:showInSearchResults></marmot:pikaOptions></marmot:marmotLocal></mods:extension></mods>");
+		$entity->ingestDatastream($modsDatastream);
+
+		$repository->ingestObject($entity);
+		$existingEntities[$personName] = $entity->id;
+		return $entity->id;
+	}
+}
+
+function createOrganization($repository, $organization){
+	$existingPID = doesEntityExist($organization);
+	if ($existingPID){
+		return $existingPID;
+	}else{
+		//Create an entity within Islandora
+		$entity = $repository->constructObject('organization');
+		$entity->models = array('islandora:organizationCModel');
+		$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'marmot:organizations');
+		$entity->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:entity_collection');
+
+		$entity->label = $organization;
+		$modsDatastream = $entity->constructDatastream('MODS');
+
+		$modsDatastream->label = 'MODS Record';
+		$modsDatastream->mimetype = 'text/xml';
+		$modsDatastream->setContentFromString("<?xml version=\"1.0\"?><mods xmlns=\"http://www.loc.gov/mods/v3\" xmlns:marmot=\"http://marmot.org/local_mods_extension\" xmlns:mods=\"http://www.loc.gov/mods/v3\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><mods:titleInfo><mods:title>{$organization}</mods:title></mods:titleInfo><mods:extension><marmot:marmotLocal><marmot:pikaOptions><marmot:includeInPika>yes</marmot:includeInPika><marmot:showInSearchResults>yes</marmot:showInSearchResults></marmot:pikaOptions></marmot:marmotLocal></mods:extension></mods>");
+		$entity->ingestDatastream($modsDatastream);
+
+		$repository->ingestObject($entity);
+		$existingEntities[$organization] = $entity->id;
+		return $entity->id;
+	}
+}

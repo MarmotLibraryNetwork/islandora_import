@@ -3,3 +3,5 @@ config.ini
 phpinfo.php
 httpd-islandora_import.conf
 tuque/tests/*
+*.log
+flc_nhw_config.ini
