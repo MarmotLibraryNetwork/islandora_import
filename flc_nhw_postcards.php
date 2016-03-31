@@ -677,18 +677,31 @@ function getObjectForIdentifier($identifier, $repository){
 					'header'  => "Authorization: Basic " . base64_encode("$fedoraUser:$fedoraPassword")
 			)
 	));
-	echo("checking solr ".$solrUrl . $solrQuery."<br/>");
+	//echo("checking solr ".$solrUrl . $solrQuery."<br/>");
 
 	$ch=curl_init();
-	$timeout=5;
+	$connectTimeout=5;
+	$timeout=20;
 
 	curl_setopt($ch, CURLOPT_URL, $solrUrl . $solrQuery);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
+	curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-	$solrResponse=curl_exec($ch);
+	$curTry = 0;
+	$maxTries = 3;
+
+	while ($curTry < $maxTries){
+		$solrResponse=curl_exec($ch);
+		if ($solrResponse !== false){
+			//We got a good response, stop looking.
+			break;
+		}
+		$curTry++;
+	}
+
 	curl_close($ch);
 
 
