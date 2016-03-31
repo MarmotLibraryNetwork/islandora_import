@@ -22,7 +22,7 @@ $config = parse_ini_file(ROOT_DIR . '/flc_nhw_config.ini');
 
 //Read the configuration file
 global $solrUrl, $fedoraUser, $fedoraPassword, $baseImageLocation, $updateModsForExistingEntities;
-global $modsLocation;
+global $modsLocation, $processAllFiles;
 $sourceCSVFile =  $config['sourceCSVFile'];
 $baseImageLocation = $config['baseImageLocation'];
 $updateModsForExistingEntities = $config['updateModsForExistingEntities'];
@@ -259,7 +259,7 @@ if (!$sourceCSVFhnd){
 }
 
 function addPostCardToIslandora($postcardData, $frontImageName, $backImageName, $repository, $config){
-	global $updateModsForExistingEntities, $modsLocation;
+	global $updateModsForExistingEntities, $modsLocation, $processAllFiles;
 
 	$objectId = $postcardData['itemId'];
 	//Check to see if the compound object has already been created
@@ -293,6 +293,11 @@ function addPostCardToIslandora($postcardData, $frontImageName, $backImageName, 
 				return;
 		}
 		$compoundObject->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $collection);
+	}else{
+		if (!$processAllFiles){
+			echo("Skipping existing object $objectId because it was already processed");
+			return;
+		}
 	}
 
 	//Create MODS record for the compound object
