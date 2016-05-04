@@ -949,10 +949,12 @@ function build_postcard_mods_data($repository, $postcardData){
 		list($entityPID, $title) = findPlaceByFortLewisId($placeId);
 
 		if ($entityPID != false){
+			$mods .= "<marmot:picturedEntity>\r\n";
 			if ($entityPID){
 				$mods .= "<marmot:entityPid>{$entityPID}</marmot:entityPid>\r\n";
 			}
 			$mods .= "<marmot:entityTitle>".htmlspecialchars($title)."</marmot:entityTitle>\r\n";
+			$mods .= "</marmot:picturedEntity>\r\n";
 		}
 	}
 	$mods .= "<marmot:pikaOptions>\r\n";
