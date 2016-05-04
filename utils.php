@@ -78,10 +78,12 @@ function findPlaceByFortLewisId($fortLewisIdentifier){
 		if ($solrResponse->response->numFound == 0){
 			return array(false, 'Unknown');
 		}else{
-			$existingFLCPlaces[$fortLewisIdentifier] = $solrResponse->response->docs[0]->PID;
 			$firstDoc = $solrResponse->response->docs[0];
+			$pid = $solrResponse->response->docs[0]->PID;
 			$title = $firstDoc->fgs_label_s;
-			return array($solrResponse->response->docs[0]->PID, $title);
+			$existingFLCPlaces[$fortLewisIdentifier] = array($pid, $title);
+
+			return $existingFLCPlaces[$fortLewisIdentifier];
 		}
 	}
 }
