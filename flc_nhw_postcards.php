@@ -159,10 +159,15 @@ if (!$sourceCSVFhnd){
 			if ($csvRecord[27] != ''){
 				$postcardData['lc_subjects'][$csvRecord[27]] = $csvRecord[27];
 			}
+			$postcardData['geo_place_ids'] = array();
+			if ($csvRecord[28] != ''){
+				$postcardData['geo_place_ids'][$csvRecord[28]] = $csvRecord[28];
+			}
 			$postcardData['geo_places'] = array();
 			if ($csvRecord[29] != ''){
 				$postcardData['geo_places'][$csvRecord[29]] = $csvRecord[29];
 			}
+			$postcardData['original_data'] = implode(',', $csvRecord);
 
 			$allPostcards[$itemId] = $postcardData;
 		}else{
@@ -191,9 +196,13 @@ if (!$sourceCSVFhnd){
 			if ($csvRecord[27] != '' && !array_key_exists($csvRecord[27], $postcardData['lc_subjects'])){
 				$postcardData['lc_subjects'][$csvRecord[27]] = $csvRecord[27];
 			}
+			if ($csvRecord[28] != '' && !array_key_exists($csvRecord[28], $postcardData['geo_place_ids'])){
+				$postcardData['geo_place_ids'][$csvRecord[28]] = $csvRecord[28];
+			}
 			if ($csvRecord[29] != '' && !array_key_exists($csvRecord[29], $postcardData['geo_places'])){
 				$postcardData['geo_places'][$csvRecord[29]] = $csvRecord[29];
 			}
+			$postcardData['original_data'] .= "\r\n" . implode(',', $csvRecord);
 			//Make sure to update with our changes
 			$allPostcards[$itemId] = $postcardData;
 		}
@@ -329,6 +338,18 @@ function addPostCardToIslandora($postcardData, $frontImageName, $backImageName, 
 			$repository->ingestObject($compoundObject);
 		}
 	} //Done setting up MODS
+
+	//Add the original data
+	if (($isNew || ($compoundObject->getDatastream('ACCESS_DB_DATA') == null))) {
+		$accessDbDatastream = $compoundObject->constructDatastream('ACCESS_DB_DATA');
+		$accessDbDatastream->label = 'Original data from access database';
+		$accessDbDatastream->mimetype = 'text/csv';
+
+		set_time_limit(1600);
+		$accessDbDatastream->setContentFromString($postcardData['original_data']);
+		$compoundObject->ingestDatastream($accessDbDatastream);
+		unset($accessDbDatastream);
+	}
 
 	//Add the thumbnail
 	global $baseImageLocation;
@@ -922,35 +943,29 @@ function build_postcard_mods_data($repository, $postcardData){
 		$mods .= "</marmot:picturedEntity>\r\n";
 	}
 
-	foreach($postcardData['geo_places'] as $place){
-		$placeParts = explode('|', $place);
-		$placeName = $placeParts[0];
-		$entityPID = doesEntityExist($placeName);
+	foreach($postcardData['geo_place_ids'] as $placeId){
+		//Find the place in solr based on information entered as external data
+		//mods_extension_marmotLocal_externalLink_fortLewisGeoPlaces_link_mlt
+		list($entityPID, $title) = findPlaceByFortLewisId($placeId);
 
-		//TODO: Create place if it doesn't exist?
-		/*if ($entityPID == false){
-			$entityPID = createOrganization($repository, $organization);
-		}*/
-
-
-		$mods .= "<marmot:relatedPlace>\r\n";
-		if ($entityPID){
-			$mods .= "<marmot:entityPid>{$entityPID}</marmot:entityPid>\r\n";
+		if ($entityPID != false){
+			if ($entityPID){
+				$mods .= "<marmot:entityPid>{$entityPID}</marmot:entityPid>\r\n";
+			}
+			$mods .= "<marmot:entityTitle>".htmlspecialchars($title)."</marmot:entityTitle>\r\n";
 		}
-		$mods .= "<marmot:entityTitle>".htmlspecialchars($placeName)."</marmot:entityTitle>\r\n";
-		$mods .= "</marmot:relatedPlace>\r\n";
 	}
-	$mods .= "<mods:accessCondition>";
-	$mods .= "<marmot:rightsStatement>";
-	$mods .= "The Center of Southwest Studies is not aware of any U.S. copyright or any other restrictions in the postcards in this collection.  However, some of the content may be protected by the U.S.  Copyright Law (Title 17, U.S.C.) and/or by the copyright or neighboring-rights laws of other nations.  Additionally, the reproduction of some materials may be restricted by privacy and/or publicity rights.";
-	$mods .= "</marmot:rightsStatement>";
-	$mods .= "</mods:accessCondition>";
 	$mods .= "<marmot:pikaOptions>\r\n";
 	$mods .= "<marmot:includeInPika>yes</marmot:includeInPika>\r\n";
 	$mods .= "<marmot:showInSearchResults>yes</marmot:showInSearchResults>\r\n";
 	$mods .= "</marmot:pikaOptions>\r\n";
 	$mods .= "</marmot:marmotLocal>\r\n";
 	$mods .= "</extension>\r\n";
+	$mods .= "<mods:accessCondition>\r\n";
+	$mods .= "<marmot:rightsStatement>\r\n";
+	$mods .= "The Center of Southwest Studies is not aware of any U.S. copyright or any other restrictions in the postcards in this collection.  However, some of the content may be protected by the U.S.  Copyright Law (Title 17, U.S.C.) and/or by the copyright or neighboring-rights laws of other nations.  Additionally, the reproduction of some materials may be restricted by privacy and/or publicity rights.";
+	$mods .= "</marmot:rightsStatement>\r\n";
+	$mods .= "</mods:accessCondition>\r\n";
 	$mods .= "</mods>";
 
 	return $mods;
@@ -977,6 +992,11 @@ function build_postcard_front_mods_data($repository, $postcardData){
 	$mods .= "</marmot:pikaOptions>\r\n";
 	$mods .= "</marmot:marmotLocal>\r\n";
 	$mods .= "</extension>\r\n";
+	$mods .= "<mods:accessCondition>\r\n";
+	$mods .= "<marmot:rightsStatement>\r\n";
+	$mods .= "The Center of Southwest Studies is not aware of any U.S. copyright or any other restrictions in the postcards in this collection.  However, some of the content may be protected by the U.S.  Copyright Law (Title 17, U.S.C.) and/or by the copyright or neighboring-rights laws of other nations.  Additionally, the reproduction of some materials may be restricted by privacy and/or publicity rights.";
+	$mods .= "</marmot:rightsStatement>\r\n";
+	$mods .= "</mods:accessCondition>\r\n";
 	$mods .= "</mods>";
 
 	return $mods;
@@ -1003,6 +1023,11 @@ function build_postcard_back_mods_data($repository, $postcardData){
 	$mods .= "</marmot:pikaOptions>\r\n";
 	$mods .= "</marmot:marmotLocal>\r\n";
 	$mods .= "</extension>\r\n";
+	$mods .= "<mods:accessCondition>\r\n";
+	$mods .= "<marmot:rightsStatement>\r\n";
+	$mods .= "The Center of Southwest Studies is not aware of any U.S. copyright or any other restrictions in the postcards in this collection.  However, some of the content may be protected by the U.S.  Copyright Law (Title 17, U.S.C.) and/or by the copyright or neighboring-rights laws of other nations.  Additionally, the reproduction of some materials may be restricted by privacy and/or publicity rights.";
+	$mods .= "</marmot:rightsStatement>\r\n";
+	$mods .= "</mods:accessCondition>\r\n";
 	$mods .= "</mods>";
 
 	return $mods;

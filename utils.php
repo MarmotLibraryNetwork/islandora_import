@@ -49,6 +49,43 @@ function doesEntityExist($name){
 	}
 }
 
+global $existingFLCPlaces;
+if ($existingFLCPlaces == null){
+	$existingFLCPlaces = array();
+}
+function findPlaceByFortLewisId($fortLewisIdentifier){
+	global $existingFLCPlaces;
+	global $solrUrl, $fedoraUser, $fedoraPassword;
+	if (array_key_exists($fortLewisIdentifier, $existingFLCPlaces)){
+		return $existingFLCPlaces[$fortLewisIdentifier];
+	}
+	$solrQuery = "?q=mods_extension_marmotLocal_externalLink_fortLewisGeoPlaces_link_mlt:\"" . urlencode($fortLewisIdentifier) . "\"&fl=PID,fgs_label_s";
+
+	//echo($solrUrl . $solrQuery);
+	//Give Solr some time to respond
+	set_time_limit(60);
+	$context = stream_context_create(array(
+			'http' => array(
+					'header'  => "Authorization: Basic " . base64_encode("$fedoraUser:$fedoraPassword")
+			)
+	));
+	$solrResponse = file_get_contents($solrUrl . $solrQuery, false, $context);
+
+	if (!$solrResponse){
+		die();
+	}else{
+		$solrResponse = json_decode($solrResponse);
+		if ($solrResponse->response->numFound == 0){
+			return array(false, 'Unknown');
+		}else{
+			$existingFLCPlaces[$fortLewisIdentifier] = $solrResponse->response->docs[0]->PID;
+			$firstDoc = $solrResponse->response->docs[0];
+			$title = $firstDoc->fgs_label_s;
+			return array($solrResponse->response->docs[0]->PID, $title);
+		}
+	}
+}
+
 function createPerson($repository, $personName){
 	$existingPID = doesEntityExist($personName);
 	if ($existingPID){
