@@ -940,7 +940,11 @@ function build_postcard_mods_data($repository, $postcardData){
 		$mods .= "<marmot:entityTitle>".htmlspecialchars($placeName)."</marmot:entityTitle>\r\n";
 		$mods .= "</marmot:relatedPlace>\r\n";
 	}
-
+	$mods .= "<mods:accessCondition>";
+	$mods .= "<marmot:rightsStatement>";
+	$mods .= "The Center of Southwest Studies is not aware of any U.S. copyright or any other restrictions in the postcards in this collection.  However, some of the content may be protected by the U.S.  Copyright Law (Title 17, U.S.C.) and/or by the copyright or neighboring-rights laws of other nations.  Additionally, the reproduction of some materials may be restricted by privacy and/or publicity rights.";
+	$mods .= "</marmot:rightsStatement>";
+	$mods .= "</mods:accessCondition>";
 	$mods .= "<marmot:pikaOptions>\r\n";
 	$mods .= "<marmot:includeInPika>yes</marmot:includeInPika>\r\n";
 	$mods .= "<marmot:showInSearchResults>yes</marmot:showInSearchResults>\r\n";
