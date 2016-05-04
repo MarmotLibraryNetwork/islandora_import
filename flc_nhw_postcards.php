@@ -743,6 +743,7 @@ function build_postcard_mods_data($repository, $postcardData){
 	$mods .= "<titleInfo>\r\n";
 	$mods .= "<title>".htmlspecialchars($postcardData['title'])."</title>\r\n";
 	$mods .= "</titleInfo>\r\n";
+	$mods .= "<mods:genre>postcard</mods:genre>\r\n";
 	$mods .= "<identifier>".htmlspecialchars($postcardData['acsnId'])."</identifier>\r\n";
 	$mods .= "<identifier>".htmlspecialchars($postcardData['itemId'])."</identifier>\r\n";
 	if (strlen($postcardData['dateCreated']) > 0) {
