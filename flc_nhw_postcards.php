@@ -22,7 +22,7 @@ $config = parse_ini_file(ROOT_DIR . '/flc_nhw_config.ini');
 
 //Read the configuration file
 global $solrUrl, $fedoraUser, $fedoraPassword, $baseImageLocation, $updateModsForExistingEntities;
-global $modsLocation, $processAllFiles;
+global $modsLocation, $processAllFiles, $logFile;
 $sourceCSVFile =  $config['sourceCSVFile'];
 $baseImageLocation = $config['baseImageLocation'];
 $updateModsForExistingEntities = $config['updateModsForExistingEntities'];
@@ -259,7 +259,7 @@ if (!$sourceCSVFhnd){
 }
 
 function addPostCardToIslandora($postcardData, $frontImageName, $backImageName, $repository, $config){
-	global $updateModsForExistingEntities, $modsLocation, $processAllFiles;
+	global $updateModsForExistingEntities, $modsLocation, $processAllFiles, $logFile;
 
 	$objectId = $postcardData['itemId'];
 	//Check to see if the compound object has already been created
@@ -295,7 +295,7 @@ function addPostCardToIslandora($postcardData, $frontImageName, $backImageName, 
 		$compoundObject->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $collection);
 	}else{
 		if (!$processAllFiles){
-			echo("Skipping existing object $objectId because it was already processed");
+			fwrite($logFile, date('Y-m-d H:i:s')."Skipping existing object $objectId because it was already processed\r\n");
 			return;
 		}
 	}
@@ -782,7 +782,7 @@ function build_postcard_mods_data($repository, $postcardData){
 	foreach ($postcardData['lc_subjects'] as $fullSubject){
 		$subjectParts = explode('|', $fullSubject);
 		//Always add the first part of the subject |a
-		$allSubjects[$subjectParts[0]] = $subjectParts[0];
+		//$allSubjects[$subjectParts[0]] = $subjectParts[0];
 		$fullSubject = $subjectParts[0];
 		for ($i = 1; $i < count($subjectParts); $i++){
 			$subjectWithoutIndicator = substr($subjectParts[$i], 1);
@@ -801,15 +801,15 @@ function build_postcard_mods_data($repository, $postcardData){
 					echo ("Unhandled subdivision $subfield");
 			}
 		}
-		if ($fullSubject != $subjectParts[0]){
-			$allSubjects[$fullSubject] = $fullSubject;
-		}
+		$allSubjects[$fullSubject] = $fullSubject;
 	}
-	$mods .= "<subject authority='lcsh'>\r\n";
+
 	foreach($allSubjects as $subject){
-		$mods .= "<topic>".htmlspecialchars($subject)."</topic>\r\n";
+		$mods .= "<subject authority='lcsh'>\r\n";
+			$mods .= "<topic>".htmlspecialchars($subject)."</topic>\r\n";
+		$mods .= "</subject>\r\n";
 	}
-	$mods .= "</subject>\r\n";
+
 	$mods .= "<language>\r\n";
 	$mods .= "<languageTerm authority='iso639-2b' type='code'>English</languageTerm>\r\n";
 	$mods .= "</language>\r\n";
