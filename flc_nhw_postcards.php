@@ -536,10 +536,13 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 function errorTrappedIngest($object, $datastream, $filename, $type, $side, $logFile){
 	$maxTries = 3;
 	for ($try = 0; $try < $maxTries; $try++){
+		if ($try > 0){
+			sleep(5);
+		}
 		try{
 			$result = $object->ingestDatastream($datastream);
 			break;
-		}catch (HttpConnectionException $e){
+		}catch (Exception $e){
 			echo("Error ingesting $side $type datastream on try $try " .  $e->getMessage());
 		}
 	}
