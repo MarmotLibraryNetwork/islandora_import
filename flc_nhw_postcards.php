@@ -429,6 +429,7 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 
 	//Create Image data
 	if ($isNew || ($newPhoto->getDatastream('OBJ') == null)) {
+		fwrite($logFile, date('Y-m-d H:i:s')."Uploading TIFF image for front\r\n");
 		if ($newPhoto->getDatastream('OBJ') == null){
 			$imageDatastream = $newPhoto->constructDatastream('OBJ');
 		}else {
@@ -448,6 +449,7 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 	//Add the JP2 derivative
 	$jp2Image = $baseImageLocation . 'jp2/'. $frontImageName . '.jp2';
 	if (($isNew || ($newPhoto->getDatastream('JP2') == null)) && file_exists($jp2Image)) {
+		fwrite($logFile, date('Y-m-d H:i:s')."Uploading JP2 image for front\r\n");
 		$imageDatastream = $newPhoto->constructDatastream('JP2');
 		$imageDatastream->label = 'JPEG 2000';
 		$imageDatastream->mimetype = 'image/jpg2';
@@ -460,6 +462,7 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 
 	$tnImage = $baseImageLocation . 'tn/'. $frontImageName . '.jpg';
 	if (($isNew || ($newPhoto->getDatastream('TN') == null)) && file_exists($tnImage)) {
+		fwrite($logFile, date('Y-m-d H:i:s')."Uploading thumbnail image for front\r\n");
 		$imageDatastream = $newPhoto->constructDatastream('TN');
 		$imageDatastream->label = 'Thumbnail';
 		$imageDatastream->mimetype = 'image/jpg';
@@ -473,6 +476,7 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 	//Add the small image
 	$smallImage = $baseImageLocation . '/sc/'. $frontImageName . '.png';
 	if (($isNew || ($newPhoto->getDatastream('SC') == null)) && file_exists($smallImage)) {
+		fwrite($logFile, date('Y-m-d H:i:s')."Uploading small image for front\r\n");
 		$imageDatastream = $newPhoto->constructDatastream('SC');
 		$imageDatastream->label = 'Small Image for Pika';
 		$imageDatastream->mimetype = 'image/png';
@@ -486,6 +490,7 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 	//Add the medium image
 	$mediumImage = $baseImageLocation . '/mc/'. $frontImageName . '.png';
 	if (($isNew || ($newPhoto->getDatastream('MC') == null)) && file_exists($mediumImage)) {
+		fwrite($logFile, date('Y-m-d H:i:s')."Uploading medium image for front\r\n");
 		$imageDatastream = $newPhoto->constructDatastream('MC');
 		$imageDatastream->label = 'Medium Image for Pika';
 		$imageDatastream->mimetype = 'image/png';
@@ -515,7 +520,7 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 
 		if ($updateDataStream){
 			set_time_limit(1600);
-			fwrite($logFile, date('Y-m-d H:i:s')."Uploading large image\r\n");
+			fwrite($logFile, date('Y-m-d H:i:s')."Uploading large image for front\r\n");
 			try{
 				$imageDatastream->setContentFromFile($largeImage);
 			}catch(Exception $e){
@@ -523,8 +528,19 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 			}
 
 			if ($newDataStream) {
-				$newPhoto->ingestDatastream($imageDatastream);
+				$maxTries = 3;
+				for ($try = 0; $try < $maxTries; $try++){
+					try{
+						$result = $newPhoto->ingestDatastream($imageDatastream);
+						break;
+					}catch (HttpConnectionException $e){
+						echo("Error ingesting large image datastream on try $try " .  $e->getMessage());
+					}
+				}
 				unset($imageDatastream);
+				if (!$result){
+					fwrite($logFile, date('Y-m-d H:i:s')."Could not uploading large image for postcard front {$largeImage} upload it later manually\r\n");
+				}
 			}
 		}
 	}
@@ -586,6 +602,7 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 
 	//Create Image data
 	if ($isNew || ($newPhoto->getDatastream('OBJ') == null)) {
+		fwrite($logFile, date('Y-m-d H:i:s')."Uploading TIFF image for back\r\n");
 		if ($newPhoto->getDatastream('OBJ') == null){
 			$imageDatastream = $newPhoto->constructDatastream('OBJ');
 		}else {
@@ -605,6 +622,7 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 	//Add the JP2 derivative
 	$jp2Image = $baseImageLocation . 'jp2/'. $backImageName . '.jp2';
 	if (($isNew || ($newPhoto->getDatastream('JP2') == null)) && file_exists($jp2Image)) {
+		fwrite($logFile, date('Y-m-d H:i:s')."Uploading JP2 image for back\r\n");
 		$imageDatastream = $newPhoto->constructDatastream('JP2');
 		$imageDatastream->label = 'JPEG 2000';
 		$imageDatastream->mimetype = 'image/jpg2';
@@ -617,6 +635,7 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 
 	$tnImage = $baseImageLocation . 'tn/'. $backImageName . '.jpg';
 	if (($isNew || ($newPhoto->getDatastream('TN') == null)) && file_exists($tnImage)) {
+		fwrite($logFile, date('Y-m-d H:i:s')."Uploading Thumbnail image for back\r\n");
 		$imageDatastream = $newPhoto->constructDatastream('TN');
 		$imageDatastream->label = 'Thumbnail';
 		$imageDatastream->mimetype = 'image/jpg';
@@ -630,6 +649,7 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 	//Add the small image
 	$smallImage = $baseImageLocation . '/sc/'. $backImageName . '.png';
 	if (($isNew || ($newPhoto->getDatastream('SC') == null)) && file_exists($smallImage)) {
+		fwrite($logFile, date('Y-m-d H:i:s')."Uploading small image for back\r\n");
 		$imageDatastream = $newPhoto->constructDatastream('SC');
 		$imageDatastream->label = 'Small Image for Pika';
 		$imageDatastream->mimetype = 'image/png';
@@ -643,6 +663,7 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 	//Add the medium image
 	$mediumImage = $baseImageLocation . '/mc/'. $backImageName . '.png';
 	if (($isNew || ($newPhoto->getDatastream('MC') == null)) && file_exists($mediumImage)) {
+		fwrite($logFile, date('Y-m-d H:i:s')."Uploading medium image for back\r\n");
 		$imageDatastream = $newPhoto->constructDatastream('MC');
 		$imageDatastream->label = 'Medium Image for Pika';
 		$imageDatastream->mimetype = 'image/png';
@@ -672,7 +693,7 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 
 		if ($updateDataStream){
 			set_time_limit(1600);
-			fwrite($logFile, date('Y-m-d H:i:s')."Uploading large image\r\n");
+			fwrite($logFile, date('Y-m-d H:i:s')."Uploading large image for back\r\n");
 			try{
 				$imageDatastream->setContentFromFile($largeImage);
 			}catch(Exception $e){
@@ -680,8 +701,19 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 			}
 
 			if ($newDataStream) {
-				$newPhoto->ingestDatastream($imageDatastream);
+				$maxTries = 3;
+				for ($try = 0; $try < $maxTries; $try++){
+					try{
+						$result = $newPhoto->ingestDatastream($imageDatastream);
+						break;
+					}catch (HttpConnectionException $e){
+						echo("Error ingesting large image datastream on try $try " .  $e->getMessage());
+					}
+				}
 				unset($imageDatastream);
+				if (!$result){
+					fwrite($logFile, date('Y-m-d H:i:s')."Could not uploading large image for postcard back {$largeImage} upload it later manually\r\n");
+				}
 			}
 		}
 	}
