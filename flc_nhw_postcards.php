@@ -442,8 +442,7 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 
 		set_time_limit(1600);
 		$imageDatastream->setContentFromFile($baseImageLocation . 'tif/'. $frontImageName . '.tif');
-		$newPhoto->ingestDatastream($imageDatastream);
-		unset($imageDatastream);
+		errorTrappedIngest($newPhoto, $imageDatastream, $baseImageLocation . 'tif/'. $frontImageName . '.tif', 'tiff image', 'front', $logFile);
 	}
 
 	//Add the JP2 derivative
@@ -456,8 +455,7 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 
 		set_time_limit(1600);
 		$imageDatastream->setContentFromFile($jp2Image);
-		$newPhoto->ingestDatastream($imageDatastream);
-		unset($imageDatastream);
+		errorTrappedIngest($newPhoto, $imageDatastream, $jp2Image, 'jp2 image', 'front', $logFile);
 	}
 
 	$tnImage = $baseImageLocation . 'tn/'. $frontImageName . '.jpg';
@@ -528,21 +526,26 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 			}
 
 			if ($newDataStream) {
-				$maxTries = 3;
-				for ($try = 0; $try < $maxTries; $try++){
-					try{
-						$result = $newPhoto->ingestDatastream($imageDatastream);
-						break;
-					}catch (HttpConnectionException $e){
-						echo("Error ingesting large image datastream on try $try " .  $e->getMessage());
-					}
-				}
-				unset($imageDatastream);
-				if (!$result){
-					fwrite($logFile, date('Y-m-d H:i:s')."Could not uploading large image for postcard front {$largeImage} upload it later manually\r\n");
-				}
+				errorTrappedIngest($newPhoto, $imageDatastream, $largeImage, 'large image', 'front', $logFile);
+
 			}
 		}
+	}
+}
+
+function errorTrappedIngest($object, $datastream, $filename, $type, $side, $logFile){
+	$maxTries = 3;
+	for ($try = 0; $try < $maxTries; $try++){
+		try{
+			$result = $object->ingestDatastream($datastream);
+			break;
+		}catch (HttpConnectionException $e){
+			echo("Error ingesting $side $type datastream on try $try " .  $e->getMessage());
+		}
+	}
+	unset($imageDatastream);
+	if (!$result){
+		fwrite($logFile, date('Y-m-d H:i:s')."Could not upload $type for postcard $side {$filename} upload it later manually\r\n");
 	}
 }
 
@@ -616,7 +619,7 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 		set_time_limit(1600);
 		$imageDatastream->setContentFromFile($baseImageLocation . 'tif/'. $backImageName . '.tif');
 		$newPhoto->ingestDatastream($imageDatastream);
-		unset($imageDatastream);
+		errorTrappedIngest($newPhoto, $imageDatastream, $baseImageLocation . 'tif/'. $backImageName . '.tif', 'tiff image', 'back', $logFile);
 	}
 
 	//Add the JP2 derivative
@@ -629,8 +632,7 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 
 		set_time_limit(1600);
 		$imageDatastream->setContentFromFile($jp2Image);
-		$newPhoto->ingestDatastream($imageDatastream);
-		unset($imageDatastream);
+		errorTrappedIngest($newPhoto, $imageDatastream, $jp2Image, 'jp2 image', 'back', $logFile);
 	}
 
 	$tnImage = $baseImageLocation . 'tn/'. $backImageName . '.jpg';
@@ -701,19 +703,7 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 			}
 
 			if ($newDataStream) {
-				$maxTries = 3;
-				for ($try = 0; $try < $maxTries; $try++){
-					try{
-						$result = $newPhoto->ingestDatastream($imageDatastream);
-						break;
-					}catch (HttpConnectionException $e){
-						echo("Error ingesting large image datastream on try $try " .  $e->getMessage());
-					}
-				}
-				unset($imageDatastream);
-				if (!$result){
-					fwrite($logFile, date('Y-m-d H:i:s')."Could not uploading large image for postcard back {$largeImage} upload it later manually\r\n");
-				}
+				errorTrappedIngest($newPhoto, $imageDatastream, $largeImage, 'large image', 'back', $logFile);
 			}
 		}
 	}
