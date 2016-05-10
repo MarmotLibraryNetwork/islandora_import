@@ -535,6 +535,7 @@ function addPostCardFront($compoundObject, $postcardData, $frontImageName, $repo
 
 function errorTrappedIngest($object, $datastream, $filename, $type, $side, $logFile){
 	$maxTries = 3;
+	$result = false;
 	for ($try = 0; $try < $maxTries; $try++){
 		if ($try > 0){
 			sleep(5);
