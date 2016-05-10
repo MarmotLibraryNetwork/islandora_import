@@ -268,6 +268,7 @@ if (!$sourceCSVFhnd){
 }
 
 function addPostCardToIslandora($postcardData, $frontImageName, $backImageName, $repository, $config){
+	set_time_limit(120);
 	global $updateModsForExistingEntities, $modsLocation, $processAllFiles, $logFile;
 
 	$objectId = $postcardData['itemId'];
