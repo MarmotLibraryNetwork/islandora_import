@@ -622,7 +622,6 @@ function addPostCardBack($compoundObject, $postcardData, $backImageName, $reposi
 
 		set_time_limit(1600);
 		$imageDatastream->setContentFromFile($baseImageLocation . 'tif/'. $backImageName . '.tif');
-		$newPhoto->ingestDatastream($imageDatastream);
 		errorTrappedIngest($newPhoto, $imageDatastream, $baseImageLocation . 'tif/'. $backImageName . '.tif', 'tiff image', 'back', $logFile);
 	}
 
