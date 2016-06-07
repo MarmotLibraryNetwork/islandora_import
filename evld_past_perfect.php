@@ -97,6 +97,7 @@ if (!$xml){
 
 		$validImage = false;
 
+
 		//Remove the folder from the image file
 		$imageFilename = substr($imageFilename, strpos($imageFilename, '\\') + 1);
 
@@ -154,7 +155,7 @@ if (!$xml){
 			fwrite($logFile, date('Y-m-d H:i:s')."$recordsProcessed) Processing $objectId ($title) \r\n");
 
 			//Check Solr to see if we have processed this already
-			$solrQuery = "?q=mods_identifier_t:$objectId&fl=PID,dc.title";
+			$solrQuery = "?q=mods_identifier_t:$objectId&fl=PID,dc.title,RELS_EXT_hasModel_uri_s";
 
 			//echo($solrUrl . $solrQuery);
 
@@ -164,7 +165,9 @@ if (!$xml){
 					)
 			));
 			$solrResponse = file_get_contents($solrUrl . $solrQuery, false, $context);
-
+			//JF added
+			$fedoraContentType = ($solrResponse->response->docs[0]->RELS_EXT_hasModel_uri_s);
+//
 			if (!$solrResponse){
 				die();
 			}else{
@@ -173,8 +176,14 @@ if (!$xml){
 					$newObject = true;
 					$existingPID = false;
 				}else{
-					$newObject = false;
-					$existingPID = $solrResponse->response->docs[0]->PID;
+					//JF added
+					if ($fedoraContentType = 'info:fedora/islandora:sp_basic_image'){
+						$newObject = true;
+						$existingPID = false;
+					}else {
+						$newObject = false;
+						$existingPID = $solrResponse->response->docs[0]->PID;
+					}
 					if ($processAllFiles == false){
 						continue;
 					}
@@ -194,6 +203,8 @@ if (!$xml){
 			if (strtolower(substr($imageFilename, -3)) == 'jpg'){
 				fwrite($basicImageNames, "$imageFilename \r\n");
 				$isLargeImage=false;
+			//Copy basic image to another location for derivative creation
+
 			}else{
 				$isLargeImage=true;
 			}
