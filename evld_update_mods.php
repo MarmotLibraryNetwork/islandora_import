@@ -88,7 +88,46 @@ if (!$xml){
             $MODS = $fedoraObject->getDatastream('MODS');
             $MODScontent = $MODS->content;
             //Parse the MODS record using simple XML
-            $MODSxml=simplexml_load_file($MODScontent, 'SimpleXmlElement', 0, 'http://www.loc.gov/mods/v3', false);
+            $MODSxml = simplexml_load_string($MODScontent, 'SimpleXmlElement', 0, 'http://www.loc.gov/mods/v3', false);
+            $extension = $MODSxml->extension->children('marmot', true);
+            //$MODSxml=simplexml_load_string($MODScontent, 'SimpleXmlElement', 0);
+            //Modify the MODS record to do what we want
+            //Get the Date Created
+            $dateCreated = $MODSxml->originInfo->dateCreated[0];
+            //Add attributes to the XML element addAttribute (assuming dateCreated is a node) addAttribute() Function
+            $dateCreated->addAttribute("point", "start");
+            //Get the node I want to delete and then call removeChild() Function or unset and then the node I want to delete
+            $dateCreatedBlankStart = $MODSxml->originInfo->dateCreated[1];
+            if ($dateCreatedBlankStart == "0" && (['point' == 'start'])) {
+                unset($dateCreatedBlankStart[0]);
+            }
+            //Move local identifier to inside marmotLocal extension using addChild
+            $migratedFileName = $extension->migratedFileName[0];
+            $extension->marmotLocal->addChild("migratedFileName", $migratedFileName);
+            $oldMigratedFileName = $extension->migratedFileName[0];
+            unset($oldMigratedFileName[0]);
+            //Remove <extent/> tags under physicalDescription and re-add as a single field
+            $extents = $MODSxml->physicalDescription->extent;
+            for ($i = count($extents) -1; $i >= 0; $i--){
+                $extent = $extents[$i];
+                unset ($extent[0]);
+            }
+            //Re-add extent tags properly
+
+
+
+
+
+            //Review updated XML using asXML() Function and write it into a file
+            //echo $MODSxml->asXML();
+
+
+
+            //echo $MODSxml->titleInfo->title;
+            //$dateCreated=echo $MODSxml->originInfo->dateCreated[0];
+
+
+
 
 
 
@@ -104,7 +143,7 @@ if (!$xml){
 
 
 
-//Modify the MODS record to do what we want
+
 
 //Save the MODS record back to Fedora
 
