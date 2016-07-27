@@ -115,6 +115,18 @@ function createPerson($repository, $personName){
 	}
 }
 
+/**
+ * @param FedoraRepository  $repository
+ * @param string $personPid
+ *
+ * @return FedoraObject
+ */
+function getFedoraObjectByPid($repository, $personPid){
+	//echo ("Loading Fedora object $personPid");
+	$fedoraObject = $repository->getObject($personPid);
+	return $fedoraObject;
+}
+
 function createOrganization($repository, $organization){
 	$existingPID = doesEntityExist($organization);
 	if ($existingPID){
