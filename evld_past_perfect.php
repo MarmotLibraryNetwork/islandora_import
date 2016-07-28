@@ -211,7 +211,7 @@ if (!$xml){
 			if ($newObject){
 				//$newPhoto->relationships->add()
 
-				//TODO: if we get a tiff this can be a large image, otherwise it should be a basic imag
+				//TODO: if we get a tiff this can be a large image, otherwise it should be a basic image
 				if (strtolower(substr($imageFilename, -3)) == 'jpg'){
 					$newPhoto->models = array('islandora:sp_basic_image');
 				}else{

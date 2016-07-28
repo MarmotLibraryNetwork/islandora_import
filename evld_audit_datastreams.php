@@ -158,6 +158,6 @@ function addDatastream($fileToLoad, $datastream, $datastreamLabel, $mimeType, $e
 		$imageDatastream->setContentFromFile($fileToLoad);
 		$newPhoto->ingestDatastream($imageDatastream);
 		unset($imageDatastream);
-		fwrite($datastreamFile, "{$existingPID},{$objectId},TN,uploaded\r\n");
+		fwrite($datastreamFile, "{$existingPID},{$objectId},$datastream,uploaded\r\n");
 	}
 }
