@@ -60,7 +60,7 @@ try {
 }
 
 //Query Solr for all basic images that need to be replaced with large images
-$solrQuery = "?q=RELS_EXT_hasModel_uri_s:\"info:fedora/islandora:sp_basic_image\"+AND+PID:\"evld:953\"&fl=PID,dc.title,RELS_EXT_hasModel_uri_s,fedora_datastreams_ms";
+$solrQuery = "?q=RELS_EXT_hasModel_uri_s:\"info:fedora/islandora:sp_basic_image\"+AND+PID:evld*&fl=PID,dc.title,RELS_EXT_hasModel_uri_s,fedora_datastreams_ms";
 $solrResponse = file_get_contents($solrUrl . $solrQuery . "&limit=1", false);
 if (!$solrResponse) {
 	die();
@@ -74,7 +74,7 @@ if (!$solrResponse) {
 		$limit = 25;
 		$numProcessed = 0;
 		while ($numProcessed < $totalRecords){
-			$solrResponse = file_get_contents($solrUrl . $solrQuery . "&limit=$limit&start=$startRecord", false);
+			$solrResponse = file_get_contents($solrUrl . $solrQuery . "&rows=$limit&start=$startRecord", false);
 			$solrResponse = json_decode($solrResponse);
 			foreach ($solrResponse->response->docs as $record){
 				$pid = $record->PID;
