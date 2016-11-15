@@ -5,3 +5,4 @@ httpd-islandora_import.conf
 tuque/tests/*
 *.log
 flc_nhw_config.ini
+western_past_perfect_config.ini
