@@ -3,7 +3,7 @@
  * @param string $title
  * @param SimpleXMLElement $exportedItem
  */
-function build_western_mods_data($title, $exportedItem, $repository, $recordsWithOddImageNoLog, $newEntities, $existingEntities){
+function build_western_mods_data($title, $exportedItem, $repository, $recordsWithOddImageNoLog, $newEntities, $existingEntities, $entityToPID, $entitiesToRename, $entitiesToDelete){
 	$mods = "<?xml version=\"1.0\"?>";
 	$mods .= "<mods xmlns=\"http://www.loc.gov/mods/v3\" xmlns:marmot=\"http://marmot.org/local_mods_extension\" xmlns:mods=\"http://www.loc.gov/mods/v3\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">";
 	/*if (isset($exportedItem->collection)){
@@ -34,68 +34,39 @@ function build_western_mods_data($title, $exportedItem, $repository, $recordsWit
 
 	$mods .= "<originInfo>\r\n";
 		$date = (string)$exportedItem->date;
+		$startDate = (string)$exportedItem->earlydate;
+		$endDate = (string)$exportedItem->latedate;
 		if (strlen($date)){
-			$dateQualifier = '';
-			if (strlen($date) > 5 && substr($date, 0, 5) == 'circa') {
-				$date = trim(substr($date, 5));
-				$dateQualifier = 'approximate';
-			}elseif (substr($date, 0, 1) == 'c') {
-				$date = substr($date, 1);
-				$dateQualifier = 'approximate';
-			} elseif (substr($date, -1) == 's' || substr($date, -1) == '?') {
-				$date = substr($date, 0, -1);
-				$dateQualifier = 'approximate';
-			} elseif (!is_numeric($date) && strlen($date) > 0){
-				echo("--Need to handle date qualifier " . $date . "<br/>\r\n");
-			}
-			if ($dateQualifier){
-				$mods .= "<dateCreated qualifier='{$dateQualifier}'>$date</dateCreated>\r\n";
-			}else{
+			if (preg_match('/^\d{4}\s*\?$/', $date)) {
+				$mods .= "<dateCreated qualifier='approximate'>$startDate</dateCreated>\r\n";
+				$mods .= "<dateCreatedEnd qualifier='approximate'>$endDate</dateCreatedEnd>\r\n";
+			}elseif (preg_match('/^\d{4}\s\(\?\)$/', $date)){
+				$mods .= "<dateCreated qualifier='approximate'>$startDate</dateCreated>\r\n";
+				$mods .= "<dateCreatedEnd qualifier='approximate'>$endDate</dateCreatedEnd>\r\n";
+			}elseif (preg_match('/^\d{4}s\s?\?$/', $date)){
+				$mods .= "<dateCreated qualifier='approximate'>$startDate</dateCreated>\r\n";
+				$mods .= "<dateCreatedEnd qualifier='approximate'>$endDate</dateCreatedEnd>\r\n";
+			}elseif (preg_match('/^\d{4}\sor\s\d{4}$/', $date)){
+				$mods .= "<dateCreated qualifier='approximate'>$startDate</dateCreated>\r\n";
+				$mods .= "<dateCreatedEnd qualifier='approximate'>$endDate</dateCreatedEnd>\r\n";
+			}elseif (preg_match('/^\d{4}$/', $date)){
+				$mods .= "<dateCreated qualifier='approximate'>$date</dateCreated>\r\n";
+			}elseif (preg_match('/^[A-Za-z]+?\s\d{1,2},\s\d{4}$/', $date)){
 				$mods .= "<dateCreated>$date</dateCreated>\r\n";
+			}elseif (preg_match('/^[A-Za-z]+?\s\d{1,2},\s\d{4}\s\?$/', $date)){
+				$date = str_replace(' ?', '', $date);
+				$mods .= "<dateCreated qualifier='questionable'>$date</dateCreated>\r\n";
+			}elseif (preg_match('/^[A-Za-z]+?\s\d{4}$/', $date)){
+				$mods .= "<dateCreated qualifier='approximate'>$date</dateCreated>\r\n";
+			}elseif (preg_match('/^[A-Za-z]+?\s\d{4}\s\?$/', $date)){
+				$date = str_replace(' ?', '', $date);
+				$mods .= "<dateCreated qualifier='questionable'>$date</dateCreated>\r\n";
+			}else{
+				echo("Unexpected date format - $date, $startDate, $endDate<br/>\r\n");
+				$mods .= "<dateCreated qualifier='approximate'>$date</dateCreated>\r\n";
 			}
 		}else{
-			$startDate = (string)$exportedItem->earlydate;
-			if (strlen($startDate)){
-				$dateQualifier = '';
-				if (strlen($startDate) > 5 && substr($startDate, 0, 5) == 'circa') {
-					$startDate = trim(substr($startDate, 5));
-					$dateQualifier = 'approximate';
-				}elseif (substr($startDate, 0, 1) == 'c') {
-					$startDate = substr($startDate, 1);
-					$dateQualifier = 'approximate';
-				} elseif (substr($startDate, -1) == 's' || substr($startDate, -1) == '?') {
-					$startDate = substr($startDate, 0, -1);
-					$dateQualifier = 'approximate';
-				} elseif (!is_numeric($startDate) && strlen($startDate) > 0){
-					echo("--Need to handle date qualifier " . $startDate . "<br/>\r\n");
-				}
-				if ($dateQualifier){
-					$mods .= "<dateCreated qualifier='{$dateQualifier}'>$startDate</dateCreated>\r\n";
-				}else{
-					$mods .= "<dateCreated>$startDate</dateCreated>\r\n";
-				}
-			}
-			$endDate = (string)$exportedItem->latedate;
-			if (strlen($endDate)){
-				$dateQualifier = '';
-				if (strlen($endDate) > 5 && substr($endDate, 0, 5) == 'circa') {
-					$endDate = trim(substr($endDate, 5));
-					$dateQualifier = 'approximate';
-				}elseif (substr($endDate, 0, 1) == 'c') {
-					$endDate = substr($endDate, 1);
-					$dateQualifier = 'approximate';
-				} elseif (substr($endDate, -1) == 's' || substr($endDate, -1) == '?') {
-					$endDate = substr($endDate, 0, -1);
-					$dateQualifier = 'approximate';
-				} elseif (!is_numeric($endDate) && strlen($endDate) > 0){
-					echo("--Need to handle date qualifier " . $endDate . "<br/>\r\n");
-				}
-				if ($dateQualifier){
-					$mods .= "<dateCreatedEnd qualifier='{$dateQualifier}'>$endDate</dateCreatedEnd>\r\n";
-				}else{
-					$mods .= "<dateCreatedEnd>$endDate</dateCreatedEnd>\r\n";
-				}
-			}
+			echo("No date provided - $startDate, $endDate<br/>\r\n");
 		}
 
 	$mods .= "</originInfo>\r\n";
@@ -191,8 +162,15 @@ function build_western_mods_data($title, $exportedItem, $repository, $recordsWit
 		$mods .= "<marmot:marmotLocal>\r\n";
 			$mods .= "<marmot:migratedIdentifier>".htmlspecialchars($exportedItem->objectid)."</marmot:migratedIdentifier>\r\n";
 			$studio = trim($exportedItem->studio);
-			if (strlen($studio) > 0){
-				$studioPID = createOrganization($repository, $studio, $newEntities, $existingEntities);
+			if (strlen($studio) > 0 && $studio != '-' && !array_key_exists($studio, $entitiesToDelete)){
+				if (array_key_exists($studio, $entitiesToRename)){
+					$studio = $entitiesToRename[$studio];
+				}
+				if (array_key_exists($studio, $entityToPID)) {
+					$studioPID = $entityToPID[$studio];
+				}else{
+					$studioPID = createOrganization($repository, $studio, $newEntities, $existingEntities, $entityToPID);
+				}
 				$mods .= "<marmot:hasCreator>\r\n";
 					$mods .= "<marmot:entityPid>{$studioPID}</marmot:entityPid>\r\n";
 					$mods .="<marmot:entityTitle>".htmlspecialchars($studio)."</marmot:entityTitle>\r\n";
@@ -202,9 +180,16 @@ function build_western_mods_data($title, $exportedItem, $repository, $recordsWit
 			$people=preg_split('/\r\n|\r|\n/', $exportedItem->people);
 			foreach($people as $person){
 				$person = trim($person);
-				if (strlen($person) > 0){
+				if (strlen($person) > 0 && $person != '-' && !array_key_exists($person, $entitiesToDelete)){
+					if (array_key_exists($person, $entitiesToRename)){
+						$person = $entitiesToRename[$person];
+					}
 					$mods .= "<marmot:relatedPersonOrg>\r\n";
-						$personPID = createPerson($repository, $person, $newEntities, $existingEntities);
+						if (array_key_exists($person, $entityToPID)) {
+							$personPID = $entityToPID[$person];
+						}else {
+							$personPID = createPerson($repository, $person, $newEntities, $existingEntities, $entityToPID);
+						}
 						$mods .= "<marmot:entityPid>{$personPID}</marmot:entityPid>\r\n";
 						$mods .="<marmot:entityTitle>".htmlspecialchars($person)."</marmot:entityTitle>\r\n";
 					$mods .= "</marmot:relatedPersonOrg>\r\n";
@@ -213,9 +198,16 @@ function build_western_mods_data($title, $exportedItem, $repository, $recordsWit
 			$places=preg_split('/\r\n|\r|\n/', $exportedItem->place);
 			foreach ($places as $place) {
 				$place = trim($place);
-				if (strlen($place) > 0){
+				if (strlen($place) > 0 && $place != '-' && !array_key_exists($place, $entitiesToDelete)){
+					if (array_key_exists($place, $entitiesToRename)){
+						$place = $entitiesToRename[$place];
+					}
 					$mods .= "<marmot:relatedPlace>\r\n";
-						$placePID = createPlace($repository, $place, $newEntities, $existingEntities);
+						if (array_key_exists($place, $entityToPID)) {
+							$placePID = $entityToPID[$place];
+						}else {
+							$placePID = createPlace($repository, $place, $newEntities, $existingEntities, $entityToPID);
+						}
 						$mods .= "<marmot:entityPid>{$placePID}</marmot:entityPid>\r\n";
 						$mods .= "<marmot:entityTitle>" . htmlspecialchars($place)."</marmot:entityTitle>\r\n";
 					$mods .= "</marmot:relatedPlace>\r\n";

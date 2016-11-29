@@ -21,7 +21,8 @@ ini_set('implicit_flush', true);
 $config = parse_ini_file(ROOT_DIR . '/western_past_perfect_config.ini');
 
 //Read the XML File
-$sourceXMLFile =  $config['sourceXMLFile'];
+$sourceXMLFile = $config['sourceXMLFile'];
+$entityMapFile = $config['entityMapFile'];
 $baseImageLocation = $config['baseImageLocation'];
 $jp2ImageLocation = $config['jp2ImageLocation'];
 $otherImageLocation = $config['otherImageLocation'];
@@ -67,6 +68,29 @@ if (file_exists($logPath . "existingEntities.log")){
 
 $existingEntitiesLog = fopen($logPath . "existingEntities.log", 'w');
 
+//Load information about entity mapping
+$entityToPID = array();
+$entitiesToDelete = array();
+$entitiesToRename = array();
+$entityMapFhnd = fopen($entityMapFile, 'r');
+$entityMapInfo = fgetcsv($entityMapFhnd);
+while ($entityMapInfo != null){
+	$originalName = trim($entityMapInfo[0]);
+	$mappedPid = trim($entityMapInfo[1]);
+	$mappedName = trim($entityMapInfo[2]);
+	$additionalInfo = trim($entityMapInfo[3]);
+	if (strlen($mappedPid) > 0){
+		$entityToPID[$originalName] = $mappedPid;
+	}elseif (strlen($mappedName) > 0){
+		$entitiesToRename[$originalName] = $mappedName;
+	}elseif (strcasecmp($additionalInfo, 'Delete') == 0){
+		$entitiesToDelete[$originalName] = true;
+	}
+
+	$entityMapInfo = fgetcsv($entityMapFhnd);
+}
+fclose($entityMapFhnd);
+
 $newEntitiesLog = fopen($logPath . "newEntities.log", 'w');
 
 $xml = simplexml_load_file($sourceXMLFile);
@@ -92,7 +116,7 @@ if (!$xml){
 		$connection->verifyPeer = false;
 		$api = new FedoraApi($connection, $serializer);
 		$repository = new FedoraRepository($api, $cache);
-		echo("Connected to Tuque OK");
+		echo("Connected to Tuque OK<br/>\r\n");
 	}catch (Exception $e){
 		echo("We could not connect to the fedora repository.");
 		die;
@@ -167,7 +191,7 @@ if (!$xml){
 		if ($validImage){
 			$objectId = (string)$exportedItem->objectid;
 
-			fwrite($logFile, date('Y-m-d H:i:s')."$recordsProcessed) Processing $objectId ($title) \r\n");
+			fwrite($logFile, date('Y-m-d H:i:s')." $recordsProcessed) Processing $objectId ($title) \r\n");
 
 			//Check Solr to see if we have processed this already
 			$solrQuery = "?q=mods_extension_marmotLocal_migratedIdentifier_t:\"$objectId\"&fl=PID,dc.title,RELS_EXT_hasModel_uri_s";
@@ -226,7 +250,7 @@ if (!$xml){
 
 				//Build our MODS data
 				include_once 'metadataBuilderWestern.php';
-				$modsData = build_western_mods_data($title, $exportedItem, $repository, $recordsWithOddImageNoLog, $newEntities, $existingEntities);
+				$modsData = build_western_mods_data($title, $exportedItem, $repository, $recordsWithOddImageNoLog, $newEntities, $existingEntities, $entityToPID, $entitiesToRename, $entitiesToDelete);
 
 				file_put_contents("C:/data/islandora_conversions/western/mods/{$exportedItem->objectid}.xml",$modsData);
 
@@ -243,12 +267,12 @@ if (!$xml){
 			if ($newObject){
 				try{
 					$repository->ingestObject($newPhoto);
-					fwrite($logFile, date('Y-m-d H:i:s')."Created object " . $newPhoto->id . "\r\n");
+					fwrite($logFile, date('Y-m-d H:i:s')." Created object " . $newPhoto->id . "\r\n");
 				}catch(Exception $e){
-					fwrite($logFile, date('Y-m-d H:i:s')."error ingesting object $e\r\n");
+					fwrite($logFile, date('Y-m-d H:i:s')." error ingesting object $e\r\n");
 				}
 			}else{
-				fwrite($logFile, date('Y-m-d H:i:s')."Updated object " . $newPhoto->id . "\r\n");
+				fwrite($logFile, date('Y-m-d H:i:s')." Updated object " . $newPhoto->id . "\r\n");
 			}
 
 			//Add the original exported past perfect metadata
@@ -279,7 +303,7 @@ if (!$xml){
 				try{
 					$newPhoto->ingestDatastream($imageDatastream);
 				}catch (Exception $e){
-					fwrite($logFile, date('Y-m-d H:i:s')."error ingesting OBJ Data Stream for $objectId, {$newPhoto->id} $e\r\n");
+					fwrite($logFile, date('Y-m-d H:i:s')." error ingesting OBJ Data Stream for $objectId, {$newPhoto->id} $e\r\n");
 				}
 
 				unset($imageDatastream);
@@ -294,7 +318,11 @@ if (!$xml){
 
 				set_time_limit(2500);
 				$imageDatastream->setContentFromFile($jp2Image);
-				$newPhoto->ingestDatastream($imageDatastream);
+				try{
+					$newPhoto->ingestDatastream($imageDatastream);
+				}catch (Exception $e){
+					fwrite($logFile, date('Y-m-d H:i:s')." error ingesting JP2 Data Stream for $objectId, {$newPhoto->id} $e\r\n");
+				}
 				unset($imageDatastream);
 			}
 
@@ -342,6 +370,7 @@ if (!$xml){
 			if (($newObject || ($newPhoto->getDatastream('LC') == null)) && file_exists($largeImage)) {
 				$updateDataStream = true;
 				$newDataStream = false;
+				set_time_limit(1600);
 				if ($newPhoto->getDatastream('LC') == null) {
 					$imageDatastream = $newPhoto->constructDatastream('LC');
 					$imageDatastream->label = 'Large Image for Pika';
@@ -355,18 +384,22 @@ if (!$xml){
 				}
 
 				if ($updateDataStream){
-					set_time_limit(1600);
-					fwrite($logFile, date('Y-m-d H:i:s')."Uploading large image\r\n");
+					set_time_limit(2000);
+					fwrite($logFile, date('Y-m-d H:i:s')." Uploading large image\r\n");
 					try{
 						$imageDatastream->setContentFromFile($largeImage);
 					}catch(Exception $e){
-						fwrite($logFile, date('Y-m-d H:i:s')."error uploading large image $e\r\n");
+						fwrite($logFile, date('Y-m-d H:i:s')." error uploading large image $e\r\n");
 					}
 
 					if ($newDataStream) {
-						$newPhoto->ingestDatastream($imageDatastream);
-						unset($imageDatastream);
+						try{
+							$newPhoto->ingestDatastream($imageDatastream);
+						}catch(Exception $e){
+							fwrite($logFile, date('Y-m-d H:i:s')." error ingesting large image datastream $e\r\n");
+						}
 					}
+					unset($imageDatastream);
 				}
 			}
 
@@ -385,7 +418,6 @@ if (!$xml){
 	fwrite($logFile, date('Y-m-d H:i:s')."Done\r\n");
 	fclose($logFile);
 	fclose($recordsNoImage);
-	fclose($recordsWithOddImageNoLog);
 	foreach ($existingEntities as $name => $pid){
 		fputcsv($existingEntitiesLog, array($name, $pid));
 	}

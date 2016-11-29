@@ -95,6 +95,12 @@ function createPerson($repository, $personName, $newEntities, $existingEntitiesL
 	if (array_key_exists($personName, $newEntities)){
 		return $newEntities[$personName];
 	}
+	$nameParts = explode(",", $personName, 2);
+	$lastName = trim($nameParts[0]);
+	$firstName = trim($nameParts[1]);
+	$firstLastName = $firstName . ' ' . $lastName;
+
+	$personName = $firstLastName;
 	$existingPID = doesEntityExist($personName);
 	if ($existingPID){
 		$existingEntitiesLocal[$personName] = $existingPID;
@@ -111,9 +117,9 @@ function createPerson($repository, $personName, $newEntities, $existingEntitiesL
 
 		$modsDatastream->label = 'MODS Record';
 		$modsDatastream->mimetype = 'text/xml';
-		$nameParts = explode(",", $personName);
-		$lastName = trim($nameParts[0]);
-		$modsDatastream->setContentFromString("<?xml version=\"1.0\"?><mods xmlns=\"http://www.loc.gov/mods/v3\" xmlns:marmot=\"http://marmot.org/local_mods_extension\" xmlns:mods=\"http://www.loc.gov/mods/v3\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><mods:titleInfo><mods:title>{$personName}</mods:title></mods:titleInfo><mods:extension><marmot:marmotLocal><marmot:familyName>{$lastName}</marmot:familyName><marmot:pikaOptions><marmot:includeInPika>yes</marmot:includeInPika><marmot:showInSearchResults>yes</marmot:showInSearchResults></marmot:pikaOptions></marmot:marmotLocal></mods:extension></mods>");
+
+
+		$modsDatastream->setContentFromString("<?xml version=\"1.0\"?><mods xmlns=\"http://www.loc.gov/mods/v3\" xmlns:marmot=\"http://marmot.org/local_mods_extension\" xmlns:mods=\"http://www.loc.gov/mods/v3\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><mods:titleInfo><mods:title>{$firstLastName}</mods:title></mods:titleInfo><mods:extension><marmot:marmotLocal><marmot:familyName>{$lastName}</marmot:familyName><marmot:givenName>{$firstName}</marmot:givenName><marmot:pikaOptions><marmot:includeInPika>yes</marmot:includeInPika><marmot:showInSearchResults>yes</marmot:showInSearchResults></marmot:pikaOptions></marmot:marmotLocal></mods:extension></mods>");
 		$entity->ingestDatastream($modsDatastream);
 
 		$repository->ingestObject($entity);
